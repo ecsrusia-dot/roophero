@@ -2,6 +2,7 @@ import { cardById, LOADOUT_LIMITS } from "../data.js";
 import { computePlayerStats } from "../systems/battleSimulator.js";
 import { fmt, power } from "../utils/format.js";
 import Card from "./Card.jsx";
+import HeroArt from "./HeroArt.jsx";
 
 const SECTIONS = [
   { category: "skill", title: "스킬", icon: "⚔️" },
@@ -39,10 +40,8 @@ export default function PrepareScreen({ collection, realmLevels, loadout, onTogg
           }}
         />
         <div className="relative flex items-center gap-4">
-          <div className="float-y h-20 w-20 shrink-0 rounded-full bg-gradient-to-b from-amber-200 via-amber-500 to-amber-900 p-[3px] shadow-[0_0_24px_rgba(240,199,94,0.55)]">
-            <div className="flex h-full w-full items-center justify-center rounded-full bg-[#171233] text-4xl">
-              ⚔️
-            </div>
+          <div className="float-y shrink-0">
+            <HeroArt size={96} />
           </div>
           <div className="flex-1">
             <div className="font-display text-base font-black text-stone-100">
@@ -56,6 +55,8 @@ export default function PrepareScreen({ collection, realmLevels, loadout, onTogg
               <span>⚔️ 공격 {Math.round(stats.attack * 10) / 10}</span>
               <span>🔷 정신력 {stats.maxFocus} (+{stats.focusRegen}/초)</span>
               <span>🛡 피해감소 {stats.damageReduction}</span>
+              <span>🎯 치명타 {Math.round(stats.critChance * 100)}%</span>
+              <span>🌫 회피 {Math.round(stats.dodge * 100)}%</span>
             </div>
           </div>
         </div>

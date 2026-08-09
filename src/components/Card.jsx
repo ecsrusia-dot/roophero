@@ -1,4 +1,4 @@
-import { RARITY_INFO } from "../data.js";
+import { RARITY_INFO, ELEMENT_INFO } from "../data.js";
 
 const CATEGORY_LABEL = { skill: "스킬", equipment: "장비", companion: "동료" };
 
@@ -6,6 +6,7 @@ const CATEGORY_LABEL = { skill: "스킬", equipment: "장비", companion: "동�
 // revealed 는 소환 연출(뒤집히며 등장)에 사용.
 export default function Card({ card, level = 1, shards, selected, onClick, revealed, delay }) {
   const rarity = RARITY_INFO[card.rarity];
+  const element = ELEMENT_INFO[card.element || card.effect?.element];
   const fancy = card.rarity === "epic" || card.rarity === "legendary";
   return (
     <div
@@ -45,6 +46,11 @@ export default function Card({ card, level = 1, shards, selected, onClick, revea
             {card.description}
           </p>
           <div className="mt-1 flex gap-2.5 text-[10px] text-stone-500">
+            {element && (
+              <span className={`font-bold ${element.color}`}>
+                {element.icon} {element.label}
+              </span>
+            )}
             {card.cost !== undefined && <span>🔷 {card.cost}</span>}
             {card.cooldown !== undefined && <span>⏳ {card.cooldown}초</span>}
             {shards !== undefined && shards > 0 && (

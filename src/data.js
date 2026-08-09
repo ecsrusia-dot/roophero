@@ -1,4 +1,4 @@
-// 카드/적/경지 정의.
+// 카드/적/경지/축복 정의.
 // 특정 웹툰의 고유명사는 쓰지 않고 오마주 수준의 자체 명칭만 사용한다.
 
 export const RARITIES = ["common", "rare", "epic", "legendary"];
@@ -9,6 +9,19 @@ export const RARITY_INFO = {
   epic: { label: "영웅", value: 3, color: "text-violet-300", ring: "ring-violet-500" },
   legendary: { label: "전설", value: 4, color: "text-amber-300", ring: "ring-amber-500" }
 };
+
+// ── 속성 상성 ────────────────────────────────────────────
+// 적의 약점 속성으로 때리면 1.5배, 저항 속성이면 0.6배.
+export const ELEMENT_INFO = {
+  slash: { label: "참격", icon: "🗡", color: "text-stone-300" },
+  flame: { label: "화염", icon: "🔥", color: "text-orange-400" },
+  frost: { label: "냉기", icon: "❄️", color: "text-cyan-300" },
+  shadow: { label: "암영", icon: "🌑", color: "text-violet-400" },
+  holy: { label: "신성", icon: "✨", color: "text-amber-200" }
+};
+export const WEAKNESS_MULT = 1.5;
+export const RESIST_MULT = 0.6;
+export const CRIT_MULT = 1.7;
 
 // 가챠 확률 (천장 없음, 순수 확률제)
 export const GACHA_RATES = {
@@ -35,11 +48,12 @@ export const CARDS = [
     name: "기본 검격",
     category: "skill",
     rarity: "common",
+    element: "slash",
     cost: 1,
     cooldown: 2,
     priority: 5,
     effect: { type: "damage", value: 6 },
-    description: "몸에 밴 가장 단순한 베기. 적에게 6의 피해를 입힌다."
+    description: "몸에 밴 가장 단순한 베기. 적에게 6의 참격 피해를 입힌다."
   },
   {
     id: "skill_002",
@@ -47,11 +61,12 @@ export const CARDS = [
     name: "뒷골목 연격",
     category: "skill",
     rarity: "common",
+    element: "slash",
     cost: 2,
     cooldown: 4,
     priority: 4,
     effect: { type: "multi_damage", value: 5, hits: 2 },
-    description: "골목 싸움에서 익힌 변칙 연타. 5의 피해로 2회 공격한다."
+    description: "골목 싸움에서 익힌 변칙 연타. 5의 참격 피해로 2회 공격한다."
   },
   {
     id: "skill_003",
@@ -71,11 +86,12 @@ export const CARDS = [
     name: "파쇄격",
     category: "skill",
     rarity: "epic",
+    element: "slash",
     cost: 4,
     cooldown: 8,
     priority: 2,
     effect: { type: "damage", value: 22 },
-    description: "전신의 힘을 실어 내려친다. 적에게 22의 피해를 입힌다."
+    description: "전신의 힘을 실어 내려친다. 적에게 22의 참격 피해를 입힌다."
   },
   {
     id: "skill_005",
@@ -83,11 +99,64 @@ export const CARDS = [
     name: "월영 일섬",
     category: "skill",
     rarity: "legendary",
+    element: "shadow",
     cost: 6,
     cooldown: 12,
     priority: 1,
     effect: { type: "damage", value: 45 },
-    description: "달그림자가 스치는 찰나의 일격. 적에게 45의 피해를 입힌다."
+    description: "달그림자가 스치는 찰나의 일격. 적에게 45의 암영 피해를 입힌다."
+  },
+  {
+    id: "skill_006",
+    icon: "🔥",
+    name: "잉걸불 탄환",
+    category: "skill",
+    rarity: "rare",
+    element: "flame",
+    cost: 3,
+    cooldown: 5,
+    priority: 3,
+    effect: { type: "damage", value: 14 },
+    description: "손끝에서 튕겨낸 불씨. 적에게 14의 화염 피해를 입힌다."
+  },
+  {
+    id: "skill_007",
+    icon: "❄️",
+    name: "서리 파문",
+    category: "skill",
+    rarity: "rare",
+    element: "frost",
+    cost: 4,
+    cooldown: 7,
+    priority: 3,
+    effect: { type: "aoe_damage", value: 8 },
+    description: "발밑에서 퍼지는 한기. 모든 적에게 8의 냉기 피해를 입힌다."
+  },
+  {
+    id: "skill_008",
+    icon: "🦇",
+    name: "흡혈 찌르기",
+    category: "skill",
+    rarity: "epic",
+    element: "shadow",
+    cost: 4,
+    cooldown: 6,
+    priority: 2,
+    effect: { type: "damage", value: 16, lifesteal: 0.5 },
+    description: "어둠이 스민 칼끝. 16의 암영 피해를 입히고 피해의 절반만큼 회복한다."
+  },
+  {
+    id: "skill_009",
+    icon: "🌅",
+    name: "여명의 심판",
+    category: "skill",
+    rarity: "legendary",
+    element: "holy",
+    cost: 7,
+    cooldown: 14,
+    priority: 1,
+    effect: { type: "aoe_damage", value: 30 },
+    description: "회랑의 어둠을 가르는 빛기둥. 모든 적에게 30의 신성 피해를 입힌다."
   },
   // ── 장비 ──────────────────────────────────────────────
   {
@@ -126,6 +195,33 @@ export const CARDS = [
     effect: { type: "damage_reduction", value: 2 },
     description: "이름 모를 수호자가 남긴 방패. 받는 피해 -2."
   },
+  {
+    id: "equip_005",
+    icon: "🦅",
+    name: "투사의 팔찌",
+    category: "equipment",
+    rarity: "rare",
+    effect: { type: "crit_chance", value: 0.08 },
+    description: "숱한 결투가 새겨진 가죽 팔찌. 치명타 확률 +8%."
+  },
+  {
+    id: "equip_006",
+    icon: "🧿",
+    name: "잉걸불 부적",
+    category: "equipment",
+    rarity: "epic",
+    effect: { type: "element_boost", element: "flame", value: 0.3 },
+    description: "꺼지지 않는 불씨가 봉인된 부적. 화염 피해 +30%."
+  },
+  {
+    id: "equip_007",
+    icon: "🌫️",
+    name: "달빛 장막",
+    category: "equipment",
+    rarity: "legendary",
+    effect: { type: "dodge", value: 0.1 },
+    description: "달빛으로 짠 얇은 망토. 10% 확률로 적의 공격을 회피한다."
+  },
   // ── 동료 ──────────────────────────────────────────────
   {
     id: "comp_001",
@@ -133,8 +229,8 @@ export const CARDS = [
     name: "떠돌이 용병",
     category: "companion",
     rarity: "common",
-    effect: { type: "attack", value: 4, interval: 3 },
-    description: "값싼 보수로 함께 싸우는 용병. 3초마다 4의 피해를 입힌다."
+    effect: { type: "attack", value: 4, interval: 3, element: "slash" },
+    description: "값싼 보수로 함께 싸우는 용병. 3초마다 4의 참격 피해를 입힌다."
   },
   {
     id: "comp_002",
@@ -151,8 +247,93 @@ export const CARDS = [
     name: "흑묘 정령",
     category: "companion",
     rarity: "epic",
-    effect: { type: "attack", value: 9, interval: 4 },
-    description: "그림자 속을 오가는 검은 고양이. 4초마다 9의 피해를 입힌다."
+    effect: { type: "attack", value: 9, interval: 4, element: "shadow" },
+    description: "그림자 속을 오가는 검은 고양이. 4초마다 9의 암영 피해를 입힌다."
+  },
+  {
+    id: "comp_004",
+    icon: "🏹",
+    name: "골목 소년 궁수",
+    category: "companion",
+    rarity: "common",
+    effect: { type: "attack", value: 3, interval: 2, element: "slash" },
+    description: "새총 대신 활을 쥔 소년. 2초마다 3의 참격 피해를 입힌다."
+  },
+  {
+    id: "comp_005",
+    icon: "🕯️",
+    name: "화로의 정령",
+    category: "companion",
+    rarity: "legendary",
+    effect: { type: "attack", value: 14, interval: 5, element: "flame" },
+    description: "오래된 화로에서 깨어난 불꽃. 5초마다 14의 화염 피해를 입힌다."
+  }
+];
+
+// ── 적 정의 (약점/저항 속성) ─────────────────────────────
+export const FOES_NORMAL = [
+  { name: "부랑 괴물", icon: "👹", weak: "slash", resist: "shadow" },
+  { name: "녹슨 갑주 망령", icon: "💀", weak: "holy", resist: "slash" },
+  { name: "굶주린 들개 무리", icon: "🐺", weak: "flame", resist: "frost" },
+  { name: "허물 벗은 도마뱀", icon: "🦎", weak: "frost", resist: "flame" },
+  { name: "그림자 술사", icon: "🧙", weak: "holy", resist: "shadow" },
+  { name: "얼어붙은 망자", icon: "🧟", weak: "flame", resist: "frost" }
+];
+export const FOES_BOSS = [
+  { name: "회랑의 감시자", icon: "👁️", weak: "shadow", resist: "holy" },
+  { name: "심연의 문지기", icon: "🗿", weak: "flame", resist: "slash" },
+  { name: "붉은 눈의 기사", icon: "🩸", weak: "holy", resist: "shadow" }
+];
+
+// ── 회랑의 축복 (런 시작 시 3택1, 해당 런에만 적용) ────────
+export const BLESSINGS = [
+  {
+    id: "bless_atk",
+    icon: "⚔️",
+    name: "강철의 결의",
+    description: "이번 런 동안 공격력 +40%"
+  },
+  {
+    id: "bless_hp",
+    icon: "❤️‍🔥",
+    name: "거인의 심장",
+    description: "이번 런 동안 최대 체력 +50%"
+  },
+  {
+    id: "bless_crit",
+    icon: "🎯",
+    name: "매의 눈",
+    description: "이번 런 동안 치명타 확률 +15%"
+  },
+  {
+    id: "bless_focus",
+    icon: "🔮",
+    name: "맑은 정신",
+    description: "이번 런 동안 정신력 회복 +60%"
+  },
+  {
+    id: "bless_vamp",
+    icon: "🦇",
+    name: "흡혈의 계약",
+    description: "이번 런 동안 입힌 피해의 15%만큼 회복"
+  },
+  {
+    id: "bless_gold",
+    icon: "💰",
+    name: "탐욕의 계약",
+    description: "이번 런의 환생 포인트 +30%"
+  },
+  {
+    id: "bless_thorn",
+    icon: "🌵",
+    name: "가시 갑주",
+    description: "이번 런 동안 받은 피해의 20%를 반사"
+  },
+  {
+    id: "bless_rush",
+    icon: "💨",
+    name: "회귀자의 질주",
+    description: "익숙한 초입을 건너뛰고 5층에서 시작"
   }
 ];
 
@@ -181,6 +362,14 @@ export const REALMS = [
     effect: { type: "focus_regen", value: 0.2 },
     baseCost: 60,
     description: "레벨당 초당 정신력 회복 +0.2"
+  },
+  {
+    id: "realm_crit",
+    icon: "🎯",
+    name: "급소 간파",
+    effect: { type: "crit_chance", value: 0.02 },
+    baseCost: 100,
+    description: "레벨당 치명타 확률 +2%"
   }
 ];
 
@@ -191,9 +380,10 @@ export function realmCost(realm, currentLevel) {
 
 export const PLAYER_BASE = {
   maxHp: 60,
-  attack: 3, // 스킬이 준비되지 않았을 때의 맨손/기본 공격
+  attack: 3, // 스킬이 준비되지 않았을 때의 맨손/기본 공격 (참격 속성)
   maxFocus: 12,
-  focusRegen: 1
+  focusRegen: 1,
+  critChance: 0.05
 };
 
 export const ENEMY_BASE = {

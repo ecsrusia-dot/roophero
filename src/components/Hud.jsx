@@ -1,12 +1,13 @@
 import { fmt } from "../utils/format.js";
+import HeroArt from "./HeroArt.jsx";
 
 export default function Hud({ points, bestFloor, powerValue, storageMode }) {
   return (
     <header className="flex items-center justify-between px-4 py-3">
       <div className="flex items-center gap-2.5">
         <div className="relative h-11 w-11 shrink-0 rounded-full bg-gradient-to-b from-amber-200 via-amber-500 to-amber-800 p-[2px] shadow-[0_0_12px_rgba(240,199,94,0.45)]">
-          <div className="flex h-full w-full items-center justify-center rounded-full bg-[#171233] text-xl">
-            ⚔️
+          <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#171233]">
+            <HeroArt size={38} />
           </div>
           <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-[#0d0a1c] px-1 text-[9px] font-bold text-amber-300 ring-1 ring-amber-700">
             {bestFloor}층

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LOADOUT_LIMITS, REALMS, realmCost, GACHA_COST } from "./data.js";
+import { LOADOUT_LIMITS, REALMS, realmCost, GACHA_COST, BLESSINGS } from "./data.js";
 import { simulateRun, computePlayerStats } from "./systems/battleSimulator.js";
 import { pullOnce } from "./systems/gacha.js";
 import { initStorage, loadSave, saveSave } from "./firebase.js";
@@ -10,6 +10,7 @@ import PrepareScreen from "./components/PrepareScreen.jsx";
 import BattleScreen from "./components/BattleScreen.jsx";
 import GachaScreen from "./components/GachaScreen.jsx";
 import RealmScreen from "./components/RealmScreen.jsx";
+import BlessingModal from "./components/BlessingModal.jsx";
 
 // 첫 환생자에게 주어지는 것들: 몸에 밴 검격 하나, 낡은 갑옷 한 벌, 약간의 포인트
 const NEW_SAVE = {
@@ -27,6 +28,7 @@ export default function App() {
   const [screen, setScreen] = useState("prepare");
   const [save, setSave] = useState(null);
   const [run, setRun] = useState(null);
+  const [blessingChoices, setBlessingChoices] = useState(null);
   const [storageMode, setStorageMode] = useState("local");
   const loaded = useRef(false);
 
@@ -94,8 +96,15 @@ export default function App() {
     });
   };
 
+  // 출전 → 축복 3택1 → 시뮬레이션 시작
   const startRun = () => {
-    setRun(simulateRun(loadoutIds, save.realmLevels));
+    const shuffled = [...BLESSINGS].sort(() => Math.random() - 0.5);
+    setBlessingChoices(shuffled.slice(0, 3));
+  };
+
+  const beginWithBlessing = (blessingId) => {
+    setBlessingChoices(null);
+    setRun(simulateRun(loadoutIds, save.realmLevels, blessingId));
     setScreen("battle");
   };
 
@@ -156,6 +165,14 @@ export default function App() {
           <GachaScreen points={save.points} collection={save.collection} onPull={pull} />
         )}
       </main>
+
+      {blessingChoices && (
+        <BlessingModal
+          blessings={blessingChoices}
+          onPick={beginWithBlessing}
+          onSkip={() => beginWithBlessing(null)}
+        />
+      )}
 
       {screen !== "battle" && (
         <BottomNav
