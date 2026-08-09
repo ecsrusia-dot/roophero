@@ -1,8 +1,10 @@
-import { cardById, LOADOUT_LIMITS, CURSE } from "../data.js";
+import { useState } from "react";
+import { cardById, LOADOUT_LIMITS, CURSE, deployCostOf, RARITY_INFO } from "../data.js";
 import { computePlayerStats } from "../systems/battleSimulator.js";
 import { fmt, power } from "../utils/format.js";
-import Card from "./Card.jsx";
+import ArtImg from "./ArtImg.jsx";
 import HeroArt from "./HeroArt.jsx";
+import PickerModal from "./PickerModal.jsx";
 
 const SECTIONS = [
   { category: "skill", title: "스킬", icon: "⚔️" },
@@ -10,16 +12,36 @@ const SECTIONS = [
   { category: "companion", title: "동료", icon: "🐾" }
 ];
 
+// 장착된 카드 하나를 작은 타일로 보여준다.
+function EquippedTile({ card, level }) {
+  return (
+    <div className={`rframe rframe-${card.rarity}`}>
+      <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[calc(0.8rem-2px)] bg-gradient-to-b from-[#1c1636] to-[#0f0a20] text-2xl">
+        <ArtImg id={card.id} fallback={card.icon} alt={card.name} />
+        <span className="absolute bottom-0 left-0 rounded-tr-md bg-black/75 px-1 py-px font-display text-[9px] font-black text-amber-300">
+          Lv.{level}
+        </span>
+        <span className="absolute right-0 top-0 rounded-bl-md bg-black/75 px-1 py-px text-[9px] font-bold text-stone-300">
+          ⚖{deployCostOf(card)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function PrepareScreen({
   collection,
   realmLevels,
   loadout,
   curse,
   maxCurse,
+  capacity,
   onSetCurse,
   onToggle,
   onStart
 }) {
+  const [picker, setPicker] = useState(null); // 열려 있는 편성 카테고리
+
   const withLevels = (ids) => ids.map((id) => ({ id, level: collection[id]?.level || 1 }));
   const stats = computePlayerStats(
     {
@@ -30,15 +52,14 @@ export default function PrepareScreen({
     realmLevels
   );
 
-  const ownedByCategory = (category) =>
-    Object.entries(collection)
-      .map(([id, meta]) => ({ card: cardById(id), ...meta }))
-      .filter((e) => e.card && e.card.category === category);
+  const usedCost = Object.values(loadout)
+    .flat()
+    .reduce((sum, id) => sum + deployCostOf(cardById(id)), 0);
 
   const canStart = loadout.skill.length > 0;
 
   return (
-    <div className="space-y-5 px-4 pb-32">
+    <div className="space-y-4 px-4 pb-32">
       {/* 주인공 패널 */}
       <div className="panel panel-ornate relative overflow-hidden p-4">
         <div
@@ -62,20 +83,48 @@ export default function PrepareScreen({
             <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] text-stone-400">
               <span>❤️ 체력 {Math.round(stats.maxHp)}</span>
               <span>⚔️ 공격 {Math.round(stats.attack * 10) / 10}</span>
-              <span>🔷 정신력 {stats.maxFocus} (+{stats.focusRegen}/초)</span>
+              <span>🔷 정신력 {stats.maxFocus} (+{Math.round(stats.focusRegen * 10) / 10}/초)</span>
               <span>🛡 피해감소 {stats.damageReduction}</span>
               <span>🎯 치명타 {Math.round(stats.critChance * 100)}%</span>
               <span>🌫 회피 {Math.round(stats.dodge * 100)}%</span>
             </div>
           </div>
         </div>
+        {/* 발동 중인 인연 */}
+        {stats.bonds.length > 0 && (
+          <div className="relative mt-2 flex flex-wrap gap-1.5">
+            {stats.bonds.map((b) => (
+              <span
+                key={b.id}
+                className="rounded-full border border-amber-600/60 bg-amber-950/40 px-2 py-0.5 text-[10px] font-bold text-amber-200"
+                title={b.effectText}
+              >
+                {b.icon} {b.name}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
-      <p className="px-1 text-xs leading-relaxed text-violet-200/70">
-        환생의 제단 앞. 다시 회랑에 들어서기 전에 몸에 익힐 기술과 챙길 장비를 고른다.
-      </p>
+      {/* 편성 코스트 */}
+      <div className="flex items-center gap-2 rounded-xl border border-amber-900/40 bg-black/30 px-3 py-2.5">
+        <span className="font-display text-xs font-black text-amber-300">⚖ 편성 코스트</span>
+        <div className="bar flex-1">
+          <span
+            className="bg-gradient-to-r from-amber-300 to-amber-600"
+            style={{ width: `${Math.min(100, (usedCost / capacity) * 100)}%` }}
+          />
+        </div>
+        <span
+          className={`font-display text-sm font-black ${
+            usedCost >= capacity ? "text-red-400" : "text-gold-grad"
+          }`}
+        >
+          {usedCost}/{capacity}
+        </span>
+      </div>
 
-      {/* 저주 회랑: 위험할수록 더 많은 포인트 */}
+      {/* 저주 회랑 */}
       <section className="rounded-xl border border-red-900/50 bg-gradient-to-b from-[#2a1020]/80 to-[#150a14]/80 p-3">
         <div className="flex items-baseline justify-between">
           <h2 className="font-display text-sm font-black text-red-300">☠ 저주 회랑</h2>
@@ -116,32 +165,65 @@ export default function PrepareScreen({
         )}
       </section>
 
+      {/* 장착 현황 (장착된 것만 표시, 편성은 별도 창) */}
       {SECTIONS.map(({ category, title, icon }) => {
-        const owned = ownedByCategory(category);
+        const equippedIds = loadout[category];
         return (
           <section key={category}>
-            <h2 className="mb-2 flex items-baseline gap-1.5 px-1 font-display text-sm font-black text-stone-200">
-              <span>{icon}</span> {title}
-              <span className="text-[11px] font-normal text-amber-500/80">
-                {loadout[category].length}/{LOADOUT_LIMITS[category]}
-              </span>
-            </h2>
-            {owned.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-stone-700 py-4 text-center text-xs text-stone-600">
-                아직 없다 — 소환 제단에서 카드를 뽑아보자
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 gap-2">
-                {owned.map(({ card, level, shards }) => (
-                  <Card
-                    key={card.id}
-                    card={card}
-                    level={level}
-                    shards={shards}
-                    selected={loadout[category].includes(card.id)}
-                    onClick={() => onToggle(category, card.id)}
-                  />
-                ))}
+            <div className="mb-1.5 flex items-center justify-between px-1">
+              <h2 className="flex items-baseline gap-1.5 font-display text-sm font-black text-stone-200">
+                <span>{icon}</span> {title}
+                <span className="text-[11px] font-normal text-amber-500/80">
+                  {equippedIds.length}/{LOADOUT_LIMITS[category]}
+                </span>
+              </h2>
+              <button
+                onClick={() => setPicker(category)}
+                className="rounded-lg border border-amber-700/60 bg-amber-950/30 px-2.5 py-1 font-display text-[11px] font-bold text-amber-300 transition hover:bg-amber-900/40"
+              >
+                편성 ▸
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {equippedIds.map((id) => {
+                const card = cardById(id);
+                return (
+                  <EquippedTile key={id} card={card} level={collection[id]?.level || 1} />
+                );
+              })}
+              {Array.from(
+                { length: LOADOUT_LIMITS[category] - equippedIds.length },
+                (_, i) => (
+                  <button
+                    key={`empty-${i}`}
+                    onClick={() => setPicker(category)}
+                    className="flex aspect-square items-center justify-center rounded-xl border border-dashed border-stone-700 text-lg text-stone-600 transition hover:border-amber-700 hover:text-amber-500"
+                  >
+                    +
+                  </button>
+                )
+              )}
+            </div>
+            {/* 카드 이름 라벨 */}
+            {equippedIds.length > 0 && (
+              <div className="mt-1 grid grid-cols-4 gap-2 px-0.5">
+                {equippedIds.map((id) => {
+                  const card = cardById(id);
+                  return (
+                    <div
+                      key={id}
+                      className={`truncate text-center text-[9px] ${RARITY_INFO[card.rarity].color}`}
+                    >
+                      {card.name}
+                    </div>
+                  );
+                })}
+                {Array.from(
+                  { length: LOADOUT_LIMITS[category] - equippedIds.length },
+                  (_, i) => (
+                    <div key={`pad-${i}`} />
+                  )
+                )}
               </div>
             )}
           </section>
@@ -154,9 +236,21 @@ export default function PrepareScreen({
           disabled={!canStart}
           className="btn-gold w-full rounded-xl py-3.5 font-display text-base font-black tracking-wider"
         >
-          {canStart ? "⚔ 회랑에 들어선다" : "스킬을 최소 1개 장착하라"}
+          {canStart ? "⚔ 회랑에 들어선다" : "스킬을 최소 1개 편성하라"}
         </button>
       </div>
+
+      {picker && (
+        <PickerModal
+          category={picker}
+          collection={collection}
+          loadout={loadout}
+          usedCost={usedCost}
+          capacity={capacity}
+          onToggle={onToggle}
+          onClose={() => setPicker(null)}
+        />
+      )}
     </div>
   );
 }

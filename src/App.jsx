@@ -6,7 +6,10 @@ import {
   GACHA_COST,
   BLESSINGS,
   ACHIEVEMENTS,
-  curseUnlocked
+  curseUnlocked,
+  costCapacity,
+  deployCostOf,
+  cardById
 } from "./data.js";
 import { simulateRun, computePlayerStats } from "./systems/battleSimulator.js";
 import { pullOnce } from "./systems/gacha.js";
@@ -34,7 +37,7 @@ const NEW_SAVE = {
   bestFloor: 0,
   curse: 0,
   soundOn: true,
-  stats: { runs: 0, kills: 0, curse3Floor10: false },
+  stats: { runs: 0, kills: 0, curse3Floor10: false, bondRun: false },
   claimedAch: []
 };
 
@@ -94,12 +97,19 @@ export default function App() {
     sfx.click();
     setSave((s) => {
       const cur = s.loadout[category];
-      const next = cur.includes(cardId)
-        ? cur.filter((id) => id !== cardId)
-        : cur.length < LOADOUT_LIMITS[category]
-          ? [...cur, cardId]
-          : cur;
-      return { ...s, loadout: { ...s.loadout, [category]: next } };
+      if (cur.includes(cardId)) {
+        return {
+          ...s,
+          loadout: { ...s.loadout, [category]: cur.filter((id) => id !== cardId) }
+        };
+      }
+      // 추가: 슬롯·편성 코스트 한도 검사
+      if (cur.length >= LOADOUT_LIMITS[category]) return s;
+      const used = Object.values(s.loadout)
+        .flat()
+        .reduce((sum, id) => sum + deployCostOf(cardById(id)), 0);
+      if (used + deployCostOf(cardById(cardId)) > costCapacity(s.realmLevels)) return s;
+      return { ...s, loadout: { ...s.loadout, [category]: [...cur, cardId] } };
     });
   };
 
@@ -138,7 +148,7 @@ export default function App() {
   };
 
   const finishRun = (retry = false) => {
-    const { floor, kills, points } = run.result;
+    const { floor, kills, points, bonds } = run.result;
     setSave((s) => ({
       ...s,
       points: s.points + points,
@@ -147,6 +157,7 @@ export default function App() {
         ...s.stats,
         runs: s.stats.runs + 1,
         kills: s.stats.kills + kills,
+        bondRun: s.stats.bondRun || (bonds && bonds.length > 0),
         curse3Floor10: s.stats.curse3Floor10 || (curse >= 3 && floor >= 10)
       }
     }));
@@ -217,6 +228,7 @@ export default function App() {
             loadout={save.loadout}
             curse={curse}
             maxCurse={maxCurse}
+            capacity={costCapacity(save.realmLevels)}
             onSetCurse={setCurse}
             onToggle={toggleLoadout}
             onStart={startRun}

@@ -24,7 +24,8 @@ import {
   WEAKNESS_MULT,
   RESIST_MULT,
   CRIT_MULT,
-  CURSE
+  CURSE,
+  activeBonds
 } from "../data.js";
 
 const MAX_FLOORS = 500; // 무한 루프 방지 안전장치
@@ -44,7 +45,7 @@ function rollRarity(rng) {
   return "common";
 }
 
-// 장비/경지의 패시브 효과를 합산해 플레이어 최종 스탯을 만든다.
+// 장비/경지/동료 상시 효과/인연을 합산해 플레이어 최종 스탯을 만든다.
 function buildPlayerStats(loadout, realmLevels) {
   const stats = {
     maxHp: PLAYER_BASE.maxHp,
@@ -57,7 +58,11 @@ function buildPlayerStats(loadout, realmLevels) {
     lifesteal: 0,
     thorns: 0,
     pointsMult: 1,
-    elementBoost: {}
+    healPct: 0,
+    compAttackPct: 0,
+    compIntervalMinus: 0,
+    elementBoost: {},
+    bonds: []
   };
 
   const apply = (effect, v) => {
@@ -75,7 +80,30 @@ function buildPlayerStats(loadout, realmLevels) {
     apply(card.effect, scaledValue(card.effect.value, level));
   for (const realm of REALMS) {
     const level = realmLevels[realm.id] || 0;
-    if (level > 0) apply(realm.effect, realm.effect.value * level);
+    if (level > 0 && realm.effect.type !== "cost_capacity")
+      apply(realm.effect, realm.effect.value * level);
+  }
+  // 동료 상시(passive) 효과
+  for (const { card, level } of loadout.companion) {
+    if (card.effect.passive) apply(card.effect, scaledValue(card.effect.value, level));
+  }
+  // 인연: 편성된 동료 조합으로 발동
+  stats.bonds = activeBonds(loadout.companion.map((c) => c.card.id));
+  for (const bond of stats.bonds) {
+    for (const [key, v] of Object.entries(bond.effects)) {
+      if (key === "elementBoost")
+        for (const [el, p] of Object.entries(v))
+          stats.elementBoost[el] = (stats.elementBoost[el] || 0) + p;
+      else if (key === "maxHpPct") stats.maxHp = Math.round(stats.maxHp * (1 + v));
+      else if (key === "attackPct") stats.attack = Math.round(stats.attack * (1 + v) * 10) / 10;
+      else if (key === "healPct") stats.healPct += v;
+      else if (key === "critChance") stats.critChance += v;
+      else if (key === "dodge") stats.dodge += v;
+      else if (key === "damageReduction") stats.damageReduction += v;
+      else if (key === "focusRegen") stats.focusRegen += v;
+      else if (key === "compAttackPct") stats.compAttackPct += v;
+      else if (key === "compIntervalMinus") stats.compIntervalMinus += v;
+    }
   }
   return stats;
 }
@@ -201,7 +229,7 @@ export function simulateRun(
   };
 
   // 속성/치명타를 반영한 최종 피해 계산
-  const calcDamage = (base, element, foe) => {
+  const calcDamage = (base, element, foe, forceCrit = false) => {
     let v = base;
     const tags = [];
     if (element && stats.elementBoost[element]) v *= 1 + stats.elementBoost[element];
@@ -212,7 +240,7 @@ export function simulateRun(
       v *= RESIST_MULT;
       tags.push("resist");
     }
-    if (rng() < stats.critChance) {
+    if (forceCrit || rng() < stats.critChance) {
       v *= CRIT_MULT;
       tags.push("crit");
     }
@@ -221,7 +249,9 @@ export function simulateRun(
 
   const dealDamage = (t, base, element, type, label, extra = {}) => {
     const idx = enemies.indexOf(t);
-    const { v, tags } = calcDamage(base, element, t);
+    const { forceCrit, ...restExtra } = extra;
+    extra = restExtra;
+    const { v, tags } = calcDamage(base, element, t, forceCrit);
     t.hp -= v;
     const tagText = tags.includes("weak")
       ? " 약점 적중!"
@@ -247,6 +277,11 @@ export function simulateRun(
   };
 
   push("run_start", "낡은 문이 열리고, 끝없는 회랑의 냉기가 스며든다.");
+  if (stats.bonds.length > 0)
+    push(
+      "event_shrine",
+      `인연이 공명한다 — ${stats.bonds.map((b) => `${b.icon} ${b.name}`).join(", ")}`
+    );
   if (curse > 0)
     push("event_shrine", `저주 ${curse}단계 — 회랑이 더 깊게 뒤틀린다. (몹 +${Math.round(curse * CURSE.statMult * 100)}% / 포인트 +${Math.round(curse * CURSE.pointMult * 100)}%)`);
   if (blessingId === "bless_rush")
@@ -291,15 +326,16 @@ export function simulateRun(
         const eff = card.effect;
 
         if (eff.type === "heal") {
-          const v = scaledValue(eff.value, level);
+          const v = Math.round(scaledValue(eff.value, level) * (1 + stats.healPct) * 10) / 10;
           hp = Math.min(stats.maxHp, hp + v);
           push("skill_heal", `[${card.name}] 체력을 ${v} 회복했다.`, {
             card: card.id,
             value: v
           });
         } else if (eff.type === "aoe_damage") {
+          let aoeDealt = 0;
           for (const t of enemies.filter((e) => e.hp > 0)) {
-            dealtThisTick += dealDamage(
+            aoeDealt += dealDamage(
               t,
               scaledValue(eff.value, level),
               card.element,
@@ -308,13 +344,20 @@ export function simulateRun(
               { card: card.id }
             );
           }
+          dealtThisTick += aoeDealt;
+          if (eff.lifesteal && aoeDealt > 0) {
+            const heal = Math.round(aoeDealt * eff.lifesteal * 10) / 10;
+            hp = Math.min(stats.maxHp, hp + heal);
+            push("skill_heal", `어둠이 생명을 빨아들인다. 체력 ${heal} 회복.`, { value: heal });
+          }
         } else {
           const hits = eff.hits || 1;
           for (let h = 0; h < hits; h++) {
             const t = target();
             if (!t) break;
             const v = dealDamage(t, scaledValue(eff.value, level), card.element, "skill", `[${card.name}]`, {
-              card: card.id
+              card: card.id,
+              forceCrit: eff.alwaysCrit
             });
             dealtThisTick += v;
             if (eff.lifesteal) {
@@ -341,13 +384,16 @@ export function simulateRun(
         hp = Math.min(stats.maxHp, hp + heal);
       }
 
-      // 3) 동료 행동
+      // 3) 동료 행동 (상시 효과 동료는 행동하지 않음)
       for (const { card, level } of loadout.companion) {
+        if (card.effect.passive) continue;
+        const interval = Math.max(1, card.effect.interval - stats.compIntervalMinus);
         const timer = compTimers.get(card.id) + 1;
-        if (timer >= card.effect.interval) {
+        if (timer >= interval) {
           compTimers.set(card.id, 0);
           if (card.effect.type === "heal") {
-            const v = scaledValue(card.effect.value, level);
+            const v =
+              Math.round(scaledValue(card.effect.value, level) * (1 + stats.healPct) * 10) / 10;
             hp = Math.min(stats.maxHp, hp + v);
             push("companion_heal", `[${card.name}] 이(가) 체력을 ${v} 회복시켰다.`, {
               card: card.id,
@@ -355,10 +401,15 @@ export function simulateRun(
             });
           } else {
             const t = enemies.find((e) => e.hp > 0);
-            if (t)
-              dealDamage(t, scaledValue(card.effect.value, level), card.effect.element, "companion", `[${card.name}]`, {
+            if (t) {
+              const base =
+                Math.round(
+                  scaledValue(card.effect.value, level) * (1 + stats.compAttackPct) * 10
+                ) / 10;
+              dealDamage(t, base, card.effect.element, "companion", `[${card.name}]`, {
                 card: card.id
               });
+            }
           }
         } else {
           compTimers.set(card.id, timer);
@@ -466,7 +517,7 @@ export function simulateRun(
 
   return {
     log,
-    result: { floor, kills, items, points },
+    result: { floor, kills, items, points, bonds: stats.bonds.map((b) => b.id) },
     stats: { maxHp: stats.maxHp, maxFocus: stats.maxFocus }
   };
 }

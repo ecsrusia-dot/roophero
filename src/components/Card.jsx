@@ -1,4 +1,4 @@
-import { RARITY_INFO, ELEMENT_INFO } from "../data.js";
+import { RARITY_INFO, ELEMENT_INFO, deployCostOf } from "../data.js";
 import ArtImg from "./ArtImg.jsx";
 
 const CATEGORY_LABEL = { skill: "스킬", equipment: "장비", companion: "동료" };
@@ -47,6 +47,7 @@ export default function Card({ card, level = 1, shards, selected, onClick, revea
             {card.description}
           </p>
           <div className="mt-1 flex gap-2.5 text-[10px] text-stone-500">
+            <span className="font-bold text-amber-400/90">⚖ {deployCostOf(card)}</span>
             {element && (
               <span className={`font-bold ${element.color}`}>
                 {element.icon} {element.label}
