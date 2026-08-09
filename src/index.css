@@ -1,12 +1,349 @@
 @import "tailwindcss";
 
-html,
-body {
-  background-color: #0c0a09;
-  color: #e7e5e4;
-  overscroll-behavior: none;
+:root {
+  --bg: #0d0a1c;
+  --gold: #f0c75e;
+  --gold-deep: #b8862d;
 }
 
+html,
+body {
+  background: radial-gradient(120% 90% at 50% 0%, #1c1440 0%, #0d0a1c 55%, #070510 100%) fixed,
+    #0d0a1c;
+  color: #e8e4f0;
+  font-family: "Noto Sans KR", system-ui, sans-serif;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.font-display {
+  font-family: "Noto Serif KR", serif;
+}
+
+/* ── 골드 텍스트/버튼 ─────────────────────────── */
+.text-gold-grad {
+  background: linear-gradient(180deg, #fff3c4 0%, #f0c75e 45%, #c8933a 58%, #ffe9a0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.btn-gold {
+  background: linear-gradient(180deg, #ffe9a0 0%, #e8b84b 35%, #a86f1f 70%, #d9a441 100%);
+  color: #2a1a05;
+  border: 1px solid #6b4a12;
+  box-shadow:
+    0 2px 10px rgba(232, 184, 75, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -2px 4px rgba(90, 50, 5, 0.4);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.btn-gold:disabled {
+  filter: grayscale(0.8) brightness(0.6);
+  box-shadow: none;
+}
+
+.btn-violet {
+  background: linear-gradient(180deg, #c084fc 0%, #7c3aed 45%, #4c1d95 100%);
+  color: #f5edff;
+  border: 1px solid #a855f7;
+  box-shadow:
+    0 2px 14px rgba(168, 85, 247, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  text-shadow: 0 1px 2px rgba(40, 10, 80, 0.8);
+}
+.btn-violet:disabled {
+  filter: grayscale(0.8) brightness(0.55);
+  box-shadow: none;
+}
+
+/* ── 패널 ─────────────────────────────────────── */
+.panel {
+  background: linear-gradient(165deg, rgba(44, 34, 86, 0.92), rgba(20, 15, 44, 0.96));
+  border: 1px solid rgba(240, 199, 94, 0.22);
+  border-radius: 0.9rem;
+  box-shadow:
+    0 6px 28px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.panel-ornate {
+  position: relative;
+}
+.panel-ornate::before,
+.panel-ornate::after {
+  content: "◆";
+  position: absolute;
+  top: -0.62rem;
+  color: var(--gold);
+  font-size: 0.7rem;
+  text-shadow: 0 0 6px rgba(240, 199, 94, 0.8);
+}
+.panel-ornate::before {
+  left: 0.85rem;
+}
+.panel-ornate::after {
+  right: 0.85rem;
+}
+
+/* ── 등급 프레임 ─────────────────────────────── */
+.rframe {
+  position: relative;
+  border-radius: 0.8rem;
+  padding: 2px;
+}
+.rframe-common {
+  background: linear-gradient(160deg, #aab2c2, #3d4351 55%, #7b8496);
+}
+.rframe-rare {
+  background: linear-gradient(160deg, #9fdcff, #1663b5 55%, #4fa8f0);
+  box-shadow: 0 0 12px rgba(79, 168, 240, 0.35);
+}
+.rframe-epic {
+  background: linear-gradient(160deg, #eab6ff, #6c1fb5 55%, #a855f7);
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.45);
+}
+.rframe-legendary {
+  background: linear-gradient(160deg, #fff0b8, #b8620d 52%, #ffb833);
+  box-shadow: 0 0 18px rgba(255, 184, 51, 0.55);
+}
+
+.shine {
+  overflow: hidden;
+}
+.shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    115deg,
+    transparent 32%,
+    rgba(255, 255, 255, 0.38) 46%,
+    transparent 58%
+  );
+  background-size: 260% 100%;
+  animation: shine 3s linear infinite;
+  pointer-events: none;
+}
+@keyframes shine {
+  from {
+    background-position: 210% 0;
+  }
+  to {
+    background-position: -110% 0;
+  }
+}
+
+/* ── 전투 연출 ───────────────────────────────── */
+.dmg {
+  position: absolute;
+  left: 50%;
+  top: -0.4rem;
+  font-family: "Noto Serif KR", serif;
+  font-weight: 900;
+  animation: dmg-rise 1.05s ease-out forwards;
+  text-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.9),
+    0 0 14px currentColor;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 30;
+}
+@keyframes dmg-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 6px) scale(0.45);
+  }
+  14% {
+    opacity: 1;
+    transform: translate(-50%, -8px) scale(1.25);
+  }
+  30% {
+    transform: translate(-50%, -14px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -54px) scale(0.92);
+  }
+}
+
+.lunge-r {
+  animation: lunge-r 0.32s ease-out;
+}
+@keyframes lunge-r {
+  0% {
+    transform: translateX(0);
+  }
+  38% {
+    transform: translateX(30px) scale(1.06);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+.lunge-l {
+  animation: lunge-l 0.32s ease-out;
+}
+@keyframes lunge-l {
+  0% {
+    transform: translateX(0);
+  }
+  38% {
+    transform: translateX(-26px) scale(1.05);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.hit-flash {
+  animation: hit-flash 0.28s ease-out;
+}
+@keyframes hit-flash {
+  0% {
+    filter: brightness(2.4) saturate(2) drop-shadow(0 0 10px #ffd76a);
+  }
+  100% {
+    filter: none;
+  }
+}
+
+.shake {
+  animation: shake 0.32s linear;
+}
+@keyframes shake {
+  0%,
+  100% {
+    transform: translate(0);
+  }
+  20% {
+    transform: translate(-5px, 3px);
+  }
+  40% {
+    transform: translate(5px, -3px);
+  }
+  60% {
+    transform: translate(-4px, -2px);
+  }
+  80% {
+    transform: translate(3px, 2px);
+  }
+}
+
+.foe-die {
+  animation: foe-die 0.55s ease-in forwards;
+}
+@keyframes foe-die {
+  to {
+    opacity: 0;
+    transform: scale(0.55) translateY(12px);
+    filter: grayscale(1) brightness(0.4);
+  }
+}
+
+.float-y {
+  animation: float-y 2.6s ease-in-out infinite;
+}
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+.banner-pop {
+  animation: banner-pop 1.3s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+@keyframes banner-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  30% {
+    transform: scale(1);
+  }
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.02) translateY(-8px);
+  }
+}
+
+/* ── 소환 연출 ───────────────────────────────── */
+.orb {
+  background:
+    radial-gradient(circle at 38% 32%, rgba(233, 202, 255, 0.9) 0%, transparent 26%),
+    radial-gradient(circle at 50% 55%, #a855f7 0%, #5b21b6 45%, #241245 78%);
+  animation: orb-pulse 2.4s ease-in-out infinite;
+}
+@keyframes orb-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 26px 6px rgba(168, 85, 247, 0.5),
+      0 0 80px 22px rgba(88, 28, 135, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 0 44px 14px rgba(200, 140, 255, 0.75),
+      0 0 110px 36px rgba(120, 40, 180, 0.5);
+  }
+}
+
+.spin-slow {
+  animation: spin-slow 14s linear infinite;
+}
+.spin-slow-rev {
+  animation: spin-slow 20s linear infinite reverse;
+}
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.reveal {
+  animation: card-flip-in 0.6s cubic-bezier(0.2, 0.85, 0.3, 1.08) both;
+}
+@keyframes card-flip-in {
+  0% {
+    transform: perspective(700px) rotateY(92deg) scale(0.8);
+    opacity: 0;
+  }
+  55% {
+    transform: perspective(700px) rotateY(-10deg) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: perspective(700px) rotateY(0) scale(1);
+  }
+}
+
+.backdrop-in {
+  animation: backdrop-in 0.3s ease-out both;
+}
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.log-line {
+  animation: log-in 0.25s ease-out;
+}
 @keyframes log-in {
   from {
     opacity: 0;
@@ -18,21 +355,29 @@ body {
   }
 }
 
-.log-line {
-  animation: log-in 0.25s ease-out;
+/* HP/자원 바 */
+.bar {
+  position: relative;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: rgba(8, 6, 20, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  overflow: hidden;
 }
-
-@keyframes card-reveal {
-  from {
-    opacity: 0;
-    transform: scale(0.85) rotateY(90deg);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) rotateY(0deg);
-  }
+.bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.3s ease-out;
 }
-
-.card-reveal {
-  animation: card-reveal 0.4s ease-out;
+.bar-hp > span {
+  background: linear-gradient(180deg, #7dffb0, #16a34a 60%, #0c6e30);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.7);
+}
+.bar-focus > span {
+  background: linear-gradient(180deg, #9fdcff, #2563eb 60%, #1e3a8a);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.7);
+}
+.bar-foe > span {
+  background: linear-gradient(180deg, #ff9d9d, #dc2626 60%, #7f1d1d);
 }

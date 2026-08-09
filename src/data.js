@@ -31,6 +31,7 @@ export const CARDS = [
   // ── 스킬 ──────────────────────────────────────────────
   {
     id: "skill_001",
+    icon: "🗡️",
     name: "기본 검격",
     category: "skill",
     rarity: "common",
@@ -42,6 +43,7 @@ export const CARDS = [
   },
   {
     id: "skill_002",
+    icon: "⚡",
     name: "뒷골목 연격",
     category: "skill",
     rarity: "common",
@@ -53,6 +55,7 @@ export const CARDS = [
   },
   {
     id: "skill_003",
+    icon: "🌬️",
     name: "숨 고르기",
     category: "skill",
     rarity: "rare",
@@ -64,6 +67,7 @@ export const CARDS = [
   },
   {
     id: "skill_004",
+    icon: "💥",
     name: "파쇄격",
     category: "skill",
     rarity: "epic",
@@ -75,6 +79,7 @@ export const CARDS = [
   },
   {
     id: "skill_005",
+    icon: "🌙",
     name: "월영 일섬",
     category: "skill",
     rarity: "legendary",
@@ -87,6 +92,7 @@ export const CARDS = [
   // ── 장비 ──────────────────────────────────────────────
   {
     id: "equip_001",
+    icon: "🥋",
     name: "낡은 가죽 갑옷",
     category: "equipment",
     rarity: "common",
@@ -95,6 +101,7 @@ export const CARDS = [
   },
   {
     id: "equip_002",
+    icon: "🔪",
     name: "뒷골목 단검",
     category: "equipment",
     rarity: "common",
@@ -103,6 +110,7 @@ export const CARDS = [
   },
   {
     id: "equip_003",
+    icon: "📿",
     name: "은빛 정신 목걸이",
     category: "equipment",
     rarity: "rare",
@@ -111,6 +119,7 @@ export const CARDS = [
   },
   {
     id: "equip_004",
+    icon: "🛡️",
     name: "수호자의 낡은 방패",
     category: "equipment",
     rarity: "epic",
@@ -120,6 +129,7 @@ export const CARDS = [
   // ── 동료 ──────────────────────────────────────────────
   {
     id: "comp_001",
+    icon: "🪓",
     name: "떠돌이 용병",
     category: "companion",
     rarity: "common",
@@ -128,6 +138,7 @@ export const CARDS = [
   },
   {
     id: "comp_002",
+    icon: "⛑️",
     name: "견습 사제",
     category: "companion",
     rarity: "rare",
@@ -136,6 +147,7 @@ export const CARDS = [
   },
   {
     id: "comp_003",
+    icon: "🐈‍⬛",
     name: "흑묘 정령",
     category: "companion",
     rarity: "epic",
@@ -148,6 +160,7 @@ export const CARDS = [
 export const REALMS = [
   {
     id: "realm_hp",
+    icon: "❤️‍🔥",
     name: "육체 단련",
     effect: { type: "max_hp", value: 6 },
     baseCost: 50,
@@ -155,6 +168,7 @@ export const REALMS = [
   },
   {
     id: "realm_atk",
+    icon: "💪",
     name: "근력 연마",
     effect: { type: "attack", value: 1 },
     baseCost: 80,
@@ -162,6 +176,7 @@ export const REALMS = [
   },
   {
     id: "realm_focus",
+    icon: "🧘",
     name: "정신 수양",
     effect: { type: "focus_regen", value: 0.2 },
     baseCost: 60,

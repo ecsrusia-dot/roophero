@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { LOADOUT_LIMITS } from "./data.js";
-import { REALMS, realmCost } from "./data.js";
-import { simulateRun } from "./systems/battleSimulator.js";
+import { LOADOUT_LIMITS, REALMS, realmCost, GACHA_COST } from "./data.js";
+import { simulateRun, computePlayerStats } from "./systems/battleSimulator.js";
 import { pullOnce } from "./systems/gacha.js";
 import { initStorage, loadSave, saveSave } from "./firebase.js";
+import { power } from "./utils/format.js";
+import Hud from "./components/Hud.jsx";
+import BottomNav from "./components/BottomNav.jsx";
 import PrepareScreen from "./components/PrepareScreen.jsx";
 import BattleScreen from "./components/BattleScreen.jsx";
 import GachaScreen from "./components/GachaScreen.jsx";
+import RealmScreen from "./components/RealmScreen.jsx";
 
 // 첫 환생자에게 주어지는 것들: 몸에 밴 검격 하나, 낡은 갑옷 한 벌, 약간의 포인트
 const NEW_SAVE = {
@@ -19,11 +22,6 @@ const NEW_SAVE = {
   loadout: { skill: ["skill_001"], equipment: ["equip_001"], companion: [] },
   bestFloor: 0
 };
-
-const TABS = [
-  { id: "prepare", label: "출전 준비" },
-  { id: "gacha", label: "소환 제단" }
-];
 
 export default function App() {
   const [screen, setScreen] = useState("prepare");
@@ -51,11 +49,24 @@ export default function App() {
 
   if (!save) {
     return (
-      <div className="flex h-dvh items-center justify-center text-stone-500">
-        회랑의 문을 여는 중…
+      <div className="flex h-dvh flex-col items-center justify-center gap-3">
+        <div className="orb flex h-16 w-16 items-center justify-center rounded-full text-2xl text-white/90">
+          ✦
+        </div>
+        <span className="text-xs tracking-widest text-violet-300/70">
+          회랑의 문을 여는 중…
+        </span>
       </div>
     );
   }
+
+  const withLevels = (ids) => ids.map((id) => ({ id, level: save.collection[id]?.level || 1 }));
+  const loadoutIds = {
+    skill: withLevels(save.loadout.skill),
+    equipment: withLevels(save.loadout.equipment),
+    companion: withLevels(save.loadout.companion)
+  };
+  const stats = computePlayerStats(loadoutIds, save.realmLevels);
 
   const toggleLoadout = (category, cardId) => {
     setSave((s) => {
@@ -84,17 +95,7 @@ export default function App() {
   };
 
   const startRun = () => {
-    const withLevels = (ids) =>
-      ids.map((id) => ({ id, level: save.collection[id]?.level || 1 }));
-    const result = simulateRun(
-      {
-        skill: withLevels(save.loadout.skill),
-        equipment: withLevels(save.loadout.equipment),
-        companion: withLevels(save.loadout.companion)
-      },
-      save.realmLevels
-    );
-    setRun(result);
+    setRun(simulateRun(loadoutIds, save.realmLevels));
     setScreen("battle");
   };
 
@@ -122,54 +123,49 @@ export default function App() {
     return results;
   };
 
-  return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4">
-      <header className="flex items-center justify-between py-4">
-        <div>
-          <h1 className="font-bold text-stone-100">끝없는 회랑</h1>
-          <p className="text-[11px] text-stone-600">
-            최고 기록 {save.bestFloor}층 · 저장 {storageMode === "firebase" ? "클라우드" : "이 기기"}
-          </p>
-        </div>
-        <div className="rounded-lg border border-amber-900 bg-amber-950/40 px-3 py-1.5 text-sm font-bold text-amber-300">
-          {save.points.toLocaleString()}P
-        </div>
-      </header>
+  const cheapestRealm = Math.min(
+    ...REALMS.map((r) => realmCost(r, save.realmLevels[r.id] || 0))
+  );
 
-      <main className="flex-1">
+  return (
+    <div className="mx-auto min-h-dvh max-w-md">
+      <Hud
+        points={save.points}
+        bestFloor={save.bestFloor}
+        powerValue={power(stats)}
+        storageMode={storageMode}
+      />
+
+      <main className={screen === "battle" ? "" : "pb-16"}>
         {screen === "prepare" && (
           <PrepareScreen
             collection={save.collection}
             realmLevels={save.realmLevels}
-            points={save.points}
             loadout={save.loadout}
             onToggle={toggleLoadout}
-            onBuyRealm={buyRealm}
             onStart={startRun}
           />
         )}
-        {screen === "battle" && run && <BattleScreen run={run} onFinish={finishRun} />}
+        {screen === "battle" && run && (
+          <BattleScreen run={run} loadoutSkills={save.loadout.skill} onFinish={finishRun} />
+        )}
+        {screen === "realm" && (
+          <RealmScreen realmLevels={save.realmLevels} points={save.points} onBuyRealm={buyRealm} />
+        )}
         {screen === "gacha" && (
           <GachaScreen points={save.points} collection={save.collection} onPull={pull} />
         )}
       </main>
 
       {screen !== "battle" && (
-        <nav className="fixed inset-x-0 bottom-0 border-t border-stone-800 bg-stone-950/95 backdrop-blur">
-          <div className="mx-auto grid max-w-md grid-cols-2">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setScreen(tab.id)}
-                className={`py-3.5 text-sm font-semibold transition ${
-                  screen === tab.id ? "text-amber-300" : "text-stone-500"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </nav>
+        <BottomNav
+          screen={screen}
+          onChange={setScreen}
+          dots={{
+            gacha: save.points >= GACHA_COST,
+            realm: save.points >= cheapestRealm
+          }}
+        />
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 // 자동전투 시뮬레이터.
 // 로드아웃과 시작 스탯을 입력받아 런 전체(사망까지)를 즉시 연산하고
 // 프론트에서 순차 재생할 수 있는 이벤트 로그 배열을 반환하는 순수 함수.
+// 각 이벤트에는 연출에 필요한 정보(대상 인덱스, 피해량, 적 HP 등)가 포함된다.
 import {
   cardById,
   scaledValue,
@@ -58,15 +59,40 @@ function buildPlayerStats(loadout, realmLevels) {
   return stats;
 }
 
+function toLoadout(loadoutIds) {
+  return {
+    skill: loadoutIds.skill.map((s) => ({ card: cardById(s.id), level: s.level })),
+    equipment: loadoutIds.equipment.map((s) => ({ card: cardById(s.id), level: s.level })),
+    companion: loadoutIds.companion.map((s) => ({ card: cardById(s.id), level: s.level }))
+  };
+}
+
+// 출전 준비 화면 등에서 최종 스탯 미리보기용
+export function computePlayerStats(loadoutIds, realmLevels = {}) {
+  return buildPlayerStats(toLoadout(loadoutIds), realmLevels);
+}
+
+const NORMAL_FOES = [
+  { name: "부랑 괴물", icon: "👹" },
+  { name: "녹슨 갑주 망령", icon: "💀" },
+  { name: "굶주린 들개 무리", icon: "🐺" },
+  { name: "허물 벗은 도마뱀", icon: "🦎" }
+];
+const BOSS_FOES = [
+  { name: "회랑의 감시자", icon: "👁️" },
+  { name: "심연의 문지기", icon: "🗿" },
+  { name: "붉은 눈의 기사", icon: "🩸" }
+];
+
 function makeEnemy(floor, index, rng) {
   const scale = 1 + floor * FLOOR_SCALING;
   const isBoss = floor % 10 === 0 && index === 0;
   const mult = isBoss ? 3 : 1;
-  const names = isBoss
-    ? ["회랑의 감시자", "심연의 문지기", "붉은 눈의 기사"]
-    : ["부랑 괴물", "녹슨 갑주 망령", "굶주린 들개 무리", "허물 벗은 도마뱀"];
+  const pool = isBoss ? BOSS_FOES : NORMAL_FOES;
+  const base = pool[Math.floor(rng() * pool.length)];
   return {
-    name: names[Math.floor(rng() * names.length)],
+    name: base.name,
+    icon: base.icon,
     isBoss,
     hp: Math.round(ENEMY_BASE.hp * scale * mult),
     maxHp: Math.round(ENEMY_BASE.hp * scale * mult),
@@ -79,15 +105,10 @@ function makeEnemy(floor, index, rng) {
  * @param {object} loadoutIds {skill: [{id, level}], equipment: [...], companion: [...]}
  * @param {object} realmLevels {realm_hp: 2, ...}
  * @param {function} [rng] 테스트용 난수 함수 (기본 Math.random)
- * @returns {{log: Array, result: {floor, kills, items, points}}}
+ * @returns {{log: Array, result: {floor, kills, items, points}, stats: object}}
  */
 export function simulateRun(loadoutIds, realmLevels = {}, rng = Math.random) {
-  const loadout = {
-    skill: loadoutIds.skill.map((s) => ({ card: cardById(s.id), level: s.level })),
-    equipment: loadoutIds.equipment.map((s) => ({ card: cardById(s.id), level: s.level })),
-    companion: loadoutIds.companion.map((s) => ({ card: cardById(s.id), level: s.level }))
-  };
-
+  const loadout = toLoadout(loadoutIds);
   const stats = buildPlayerStats(loadout, realmLevels);
   const log = [];
   let hp = stats.maxHp;
@@ -95,6 +116,7 @@ export function simulateRun(loadoutIds, realmLevels = {}, rng = Math.random) {
   let kills = 0;
   let items = []; // 획득 아이템 등급 목록
   let floor = 0;
+  let enemies = [];
 
   // 우선순위 낮은 값 먼저 발동
   const skills = [...loadout.skill].sort((a, b) => a.card.priority - b.card.priority);
@@ -102,17 +124,55 @@ export function simulateRun(loadoutIds, realmLevels = {}, rng = Math.random) {
   const compTimers = new Map(loadout.companion.map((c) => [c.card.id, 0]));
 
   const push = (type, message, extra = {}) =>
-    log.push({ type, message, floor, hp: Math.max(0, Math.round(hp)), ...extra });
+    log.push({
+      type,
+      message,
+      floor,
+      hp: Math.max(0, Math.round(hp)),
+      focus: Math.round(focus * 10) / 10,
+      ...extra
+    });
+
+  const onKill = (t, idx) => {
+    kills += 1;
+    push("kill", `${t.name}을(를) 쓰러뜨렸다.`, { target: idx });
+    if (rng() < DROP_CHANCE) {
+      const rarity = rollRarity(rng);
+      items.push(rarity);
+      push("drop", `${RARITY_INFO[rarity].label} 등급의 전리품을 챙겼다.`, { rarity });
+    }
+  };
+
+  const dealDamage = (t, value, type, message, extra = {}) => {
+    const idx = enemies.indexOf(t);
+    t.hp -= value;
+    push(type, message, {
+      target: idx,
+      value,
+      foeHp: Math.max(0, Math.round(t.hp)),
+      ...extra
+    });
+    if (t.hp <= 0) onKill(t, idx);
+  };
 
   push("run_start", "낡은 문이 열리고, 끝없는 회랑의 냉기가 스며든다.");
 
   while (floor < MAX_FLOORS) {
     floor += 1;
     const enemyCount = floor % 10 === 0 ? 1 : Math.min(3, 1 + Math.floor(floor / 7));
-    const enemies = Array.from({ length: enemyCount }, (_, i) => makeEnemy(floor, i, rng));
+    enemies = Array.from({ length: enemyCount }, (_, i) => makeEnemy(floor, i, rng));
     push(
       "floor_start",
-      `${floor}층 — ${enemies.map((e) => e.name).join(", ")}${enemies[0].isBoss ? " (수문장)" : ""} 이(가) 길을 막아선다.`
+      `${floor}층 — ${enemies.map((e) => e.name).join(", ")}${enemies[0].isBoss ? " (수문장)" : ""} 이(가) 길을 막아선다.`,
+      {
+        foes: enemies.map((e) => ({
+          name: e.name,
+          icon: e.icon,
+          hp: e.hp,
+          max: e.maxHp,
+          boss: e.isBoss
+        }))
+      }
     );
 
     let tick = 0;
@@ -136,24 +196,19 @@ export function simulateRun(loadoutIds, realmLevels = {}, rng = Math.random) {
         if (card.effect.type === "heal") {
           const v = scaledValue(card.effect.value, level);
           hp = Math.min(stats.maxHp, hp + v);
-          push("skill", `[${card.name}] 체력을 ${v} 회복했다.`, { card: card.id });
+          push("skill_heal", `[${card.name}] 체력을 ${v} 회복했다.`, {
+            card: card.id,
+            value: v
+          });
         } else {
           const hits = card.effect.hits || 1;
           for (let h = 0; h < hits; h++) {
             const t = target();
             if (!t) break;
             const v = scaledValue(card.effect.value, level);
-            t.hp -= v;
-            push("skill", `[${card.name}] ${t.name}에게 ${v}의 피해!`, { card: card.id });
-            if (t.hp <= 0) {
-              kills += 1;
-              push("kill", `${t.name}을(를) 쓰러뜨렸다.`);
-              if (rng() < DROP_CHANCE) {
-                const rarity = rollRarity(rng);
-                items.push(rarity);
-                push("drop", `${RARITY_INFO[rarity].label} 등급의 전리품을 챙겼다.`, { rarity });
-              }
-            }
+            dealDamage(t, v, "skill", `[${card.name}] ${t.name}에게 ${v}의 피해!`, {
+              card: card.id
+            });
           }
         }
         break;
@@ -163,17 +218,12 @@ export function simulateRun(loadoutIds, realmLevels = {}, rng = Math.random) {
       if (!acted) {
         const t = target();
         if (t) {
-          t.hp -= stats.attack;
-          push("attack", `맨손 감각으로 ${t.name}을(를) 후려쳤다. ${stats.attack}의 피해.`);
-          if (t.hp <= 0) {
-            kills += 1;
-            push("kill", `${t.name}을(를) 쓰러뜨렸다.`);
-            if (rng() < DROP_CHANCE) {
-              const rarity = rollRarity(rng);
-              items.push(rarity);
-              push("drop", `${RARITY_INFO[rarity].label} 등급의 전리품을 챙겼다.`, { rarity });
-            }
-          }
+          dealDamage(
+            t,
+            stats.attack,
+            "attack",
+            `맨손 감각으로 ${t.name}을(를) 후려쳤다. ${stats.attack}의 피해.`
+          );
         }
       }
 
@@ -185,22 +235,17 @@ export function simulateRun(loadoutIds, realmLevels = {}, rng = Math.random) {
           if (card.effect.type === "heal") {
             const v = scaledValue(card.effect.value, level);
             hp = Math.min(stats.maxHp, hp + v);
-            push("companion", `[${card.name}] 이(가) 체력을 ${v} 회복시켰다.`, { card: card.id });
+            push("companion_heal", `[${card.name}] 이(가) 체력을 ${v} 회복시켰다.`, {
+              card: card.id,
+              value: v
+            });
           } else {
             const t = enemies.find((e) => e.hp > 0);
             if (t) {
               const v = scaledValue(card.effect.value, level);
-              t.hp -= v;
-              push("companion", `[${card.name}] 이(가) ${t.name}에게 ${v}의 피해!`, { card: card.id });
-              if (t.hp <= 0) {
-                kills += 1;
-                push("kill", `${t.name}을(를) 쓰러뜨렸다.`);
-                if (rng() < DROP_CHANCE) {
-                  const rarity = rollRarity(rng);
-                  items.push(rarity);
-                  push("drop", `${RARITY_INFO[rarity].label} 등급의 전리품을 챙겼다.`, { rarity });
-                }
-              }
+              dealDamage(t, v, "companion", `[${card.name}] 이(가) ${t.name}에게 ${v}의 피해!`, {
+                card: card.id
+              });
             }
           }
         } else {
@@ -213,7 +258,10 @@ export function simulateRun(loadoutIds, realmLevels = {}, rng = Math.random) {
         if (e.hp <= 0) continue;
         const dmg = Math.max(1, Math.round((e.attack - stats.damageReduction) * 10) / 10);
         hp -= dmg;
-        push("enemy_attack", `${e.name}의 공격! ${dmg}의 피해를 입었다.`);
+        push("enemy_attack", `${e.name}의 공격! ${dmg}의 피해를 입었다.`, {
+          attacker: enemies.indexOf(e),
+          value: dmg
+        });
         if (hp <= 0) break;
       }
 
@@ -238,5 +286,9 @@ export function simulateRun(loadoutIds, realmLevels = {}, rng = Math.random) {
     `환생의 제단이 빛난다. 도달 ${floor}층 · 처치 ${kills} · 전리품 ${items.length}개 → 환생 포인트 +${points}`
   );
 
-  return { log, result: { floor, kills, items, points } };
+  return {
+    log,
+    result: { floor, kills, items, points },
+    stats: { maxHp: stats.maxHp, maxFocus: stats.maxFocus }
+  };
 }

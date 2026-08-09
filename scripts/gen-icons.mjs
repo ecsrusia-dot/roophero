@@ -26,8 +26,8 @@ function chunk(type, data) {
 
 // 진한 배경에 중앙 사각형(문양)이 있는 단순한 아이콘
 function makePng(size) {
-  const bg = [12, 10, 9]; // stone-950
-  const fg = [217, 119, 6]; // amber-600
+  const bg = [13, 10, 28]; // 딥 인디고
+  const fg = [240, 199, 94]; // 골드
   const inner = size * 0.28;
   const raw = Buffer.alloc(size * (size * 3 + 1));
   let off = 0;

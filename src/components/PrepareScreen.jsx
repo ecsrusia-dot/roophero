@@ -1,21 +1,25 @@
-import { cardById, LOADOUT_LIMITS, REALMS, realmCost } from "../data.js";
+import { cardById, LOADOUT_LIMITS } from "../data.js";
+import { computePlayerStats } from "../systems/battleSimulator.js";
+import { fmt, power } from "../utils/format.js";
 import Card from "./Card.jsx";
 
 const SECTIONS = [
-  { category: "skill", title: "스킬" },
-  { category: "equipment", title: "장비" },
-  { category: "companion", title: "동료" }
+  { category: "skill", title: "스킬", icon: "⚔️" },
+  { category: "equipment", title: "장비", icon: "🛡️" },
+  { category: "companion", title: "동료", icon: "🐾" }
 ];
 
-export default function PrepareScreen({
-  collection,
-  realmLevels,
-  points,
-  loadout,
-  onToggle,
-  onBuyRealm,
-  onStart
-}) {
+export default function PrepareScreen({ collection, realmLevels, loadout, onToggle, onStart }) {
+  const withLevels = (ids) => ids.map((id) => ({ id, level: collection[id]?.level || 1 }));
+  const stats = computePlayerStats(
+    {
+      skill: withLevels(loadout.skill),
+      equipment: withLevels(loadout.equipment),
+      companion: withLevels(loadout.companion)
+    },
+    realmLevels
+  );
+
   const ownedByCategory = (category) =>
     Object.entries(collection)
       .map(([id, meta]) => ({ card: cardById(id), ...meta }))
@@ -24,24 +28,56 @@ export default function PrepareScreen({
   const canStart = loadout.skill.length > 0;
 
   return (
-    <div className="space-y-6 pb-28">
-      <p className="text-sm leading-relaxed text-stone-400">
+    <div className="space-y-5 px-4 pb-32">
+      {/* 주인공 패널 */}
+      <div className="panel panel-ornate relative overflow-hidden p-4">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-60"
+          style={{
+            background:
+              "radial-gradient(55% 70% at 50% 0%, rgba(124,58,237,0.35), transparent 70%)"
+          }}
+        />
+        <div className="relative flex items-center gap-4">
+          <div className="float-y h-20 w-20 shrink-0 rounded-full bg-gradient-to-b from-amber-200 via-amber-500 to-amber-900 p-[3px] shadow-[0_0_24px_rgba(240,199,94,0.55)]">
+            <div className="flex h-full w-full items-center justify-center rounded-full bg-[#171233] text-4xl">
+              ⚔️
+            </div>
+          </div>
+          <div className="flex-1">
+            <div className="font-display text-base font-black text-stone-100">
+              이름 없는 회귀자
+            </div>
+            <div className="mt-0.5 font-display text-sm font-black text-gold-grad">
+              🗡 전투력 {fmt(power(stats))}
+            </div>
+            <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] text-stone-400">
+              <span>❤️ 체력 {Math.round(stats.maxHp)}</span>
+              <span>⚔️ 공격 {Math.round(stats.attack * 10) / 10}</span>
+              <span>🔷 정신력 {stats.maxFocus} (+{stats.focusRegen}/초)</span>
+              <span>🛡 피해감소 {stats.damageReduction}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p className="px-1 text-xs leading-relaxed text-violet-200/70">
         환생의 제단 앞. 다시 회랑에 들어서기 전에 몸에 익힐 기술과 챙길 장비를 고른다.
       </p>
 
-      {SECTIONS.map(({ category, title }) => {
+      {SECTIONS.map(({ category, title, icon }) => {
         const owned = ownedByCategory(category);
         return (
           <section key={category}>
-            <h2 className="mb-2 text-sm font-bold text-stone-300">
-              {title}{" "}
-              <span className="font-normal text-stone-500">
+            <h2 className="mb-2 flex items-baseline gap-1.5 px-1 font-display text-sm font-black text-stone-200">
+              <span>{icon}</span> {title}
+              <span className="text-[11px] font-normal text-amber-500/80">
                 {loadout[category].length}/{LOADOUT_LIMITS[category]}
               </span>
             </h2>
             {owned.length === 0 ? (
-              <p className="text-xs text-stone-600">
-                아직 없다. 환생 포인트로 카드를 뽑아보자.
+              <p className="rounded-xl border border-dashed border-stone-700 py-4 text-center text-xs text-stone-600">
+                아직 없다 — 소환 제단에서 카드를 뽑아보자
               </p>
             ) : (
               <div className="grid grid-cols-1 gap-2">
@@ -61,45 +97,13 @@ export default function PrepareScreen({
         );
       })}
 
-      <section>
-        <h2 className="mb-2 text-sm font-bold text-stone-300">
-          경지 <span className="font-normal text-stone-500">영구 성장 · 포인트로 수련</span>
-        </h2>
-        <div className="space-y-2">
-          {REALMS.map((realm) => {
-            const level = realmLevels[realm.id] || 0;
-            const cost = realmCost(realm, level);
-            return (
-              <div
-                key={realm.id}
-                className="flex items-center justify-between rounded-lg border border-stone-700 bg-stone-900 p-3"
-              >
-                <div>
-                  <div className="text-sm font-semibold text-stone-200">
-                    {realm.name} <span className="text-xs text-stone-500">Lv.{level}</span>
-                  </div>
-                  <div className="text-xs text-stone-400">{realm.description}</div>
-                </div>
-                <button
-                  onClick={() => onBuyRealm(realm.id)}
-                  disabled={points < cost}
-                  className="shrink-0 rounded-md border border-amber-700 px-3 py-1.5 text-xs text-amber-300 transition enabled:hover:bg-amber-900/40 disabled:opacity-40"
-                >
-                  수련 {cost}P
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <div className="fixed inset-x-0 bottom-14 mx-auto max-w-md px-4">
+      <div className="fixed inset-x-0 bottom-16 z-30 mx-auto max-w-md px-4 pb-2">
         <button
           onClick={onStart}
           disabled={!canStart}
-          className="w-full rounded-xl bg-red-900 py-3 font-bold text-red-100 shadow-lg transition enabled:hover:bg-red-800 disabled:opacity-40"
+          className="btn-gold w-full rounded-xl py-3.5 font-display text-base font-black tracking-wider"
         >
-          {canStart ? "회랑에 들어선다" : "스킬을 최소 1개 선택"}
+          {canStart ? "⚔ 회랑에 들어선다" : "스킬을 최소 1개 장착하라"}
         </button>
       </div>
     </div>
