@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+html,
+body {
+  background-color: #0c0a09;
+  color: #e7e5e4;
+  overscroll-behavior: none;
+}
+
+@keyframes log-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.log-line {
+  animation: log-in 0.25s ease-out;
+}
+
+@keyframes card-reveal {
+  from {
+    opacity: 0;
+    transform: scale(0.85) rotateY(90deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotateY(0deg);
+  }
+}
+
+.card-reveal {
+  animation: card-reveal 0.4s ease-out;
+}

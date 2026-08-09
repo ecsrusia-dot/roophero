@@ -1,0 +1,10 @@
+node_modules
+dist
+dev-dist
+.env
+.env.local
+*.local
+.DS_Store
+
+# npm run icons 로 생성되는 placeholder (실제 아이콘으로 교체 시 이 줄 제거)
+public/icons/
