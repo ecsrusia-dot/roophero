@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { cardById, ELEMENT_INFO } from "../data.js";
 import { fmt } from "../utils/format.js";
 import HeroArt from "./HeroArt.jsx";
+import ArtImg from "./ArtImg.jsx";
 
 // 적 유닛 배치 (최대 3마리, 원근감을 위한 스케일 차이)
 const FOE_POS = [
@@ -272,7 +273,7 @@ export default function BattleScreen({ run, loadoutSkills, onFinish }) {
                     </span>
                   ))}
                 <div
-                  className={`flex h-14 w-14 items-center justify-center rounded-full text-3xl transition ${
+                  className={`flex h-14 w-14 items-center justify-center overflow-hidden rounded-full text-3xl transition ${
                     f.boss
                       ? "bg-gradient-to-b from-red-500/40 to-red-950/60 shadow-[0_0_22px_rgba(239,68,68,0.7)] ring-2 ring-red-500"
                       : f.enraged
@@ -283,7 +284,7 @@ export default function BattleScreen({ run, loadoutSkills, onFinish }) {
                     charging ? { boxShadow: "0 0 26px 6px rgba(255,80,80,0.8)" } : undefined
                   }
                 >
-                  {f.icon}
+                  <ArtImg id={f.art} fallback={f.icon} alt={f.name} />
                 </div>
                 {!f.dead && (
                   <>

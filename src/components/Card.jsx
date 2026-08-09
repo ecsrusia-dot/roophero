@@ -1,4 +1,5 @@
 import { RARITY_INFO, ELEMENT_INFO } from "../data.js";
+import ArtImg from "./ArtImg.jsx";
 
 const CATEGORY_LABEL = { skill: "스킬", equipment: "장비", companion: "동료" };
 
@@ -25,8 +26,8 @@ export default function Card({ card, level = 1, shards, selected, onClick, revea
       >
         {/* 아이콘 타일 */}
         <div className={`rframe rframe-${card.rarity} shrink-0`}>
-          <div className="relative flex h-14 w-14 items-center justify-center rounded-[calc(0.8rem-2px)] bg-gradient-to-b from-[#241c46] to-[#0f0a20] text-2xl">
-            {card.icon}
+          <div className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-[calc(0.8rem-2px)] bg-gradient-to-b from-[#241c46] to-[#0f0a20] text-2xl">
+            <ArtImg id={card.id} fallback={card.icon} alt={card.name} />
             <span className="absolute bottom-0 left-0 rounded-tr-md rounded-bl-[calc(0.8rem-2px)] bg-black/75 px-1 py-px font-display text-[9px] font-black text-amber-300">
               Lv.{level}
             </span>

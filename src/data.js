@@ -272,17 +272,17 @@ export const CARDS = [
 
 // ── 적 정의 (약점/저항 속성) ─────────────────────────────
 export const FOES_NORMAL = [
-  { name: "부랑 괴물", icon: "👹", weak: "slash", resist: "shadow" },
-  { name: "녹슨 갑주 망령", icon: "💀", weak: "holy", resist: "slash" },
-  { name: "굶주린 들개 무리", icon: "🐺", weak: "flame", resist: "frost" },
-  { name: "허물 벗은 도마뱀", icon: "🦎", weak: "frost", resist: "flame" },
-  { name: "그림자 술사", icon: "🧙", weak: "holy", resist: "shadow" },
-  { name: "얼어붙은 망자", icon: "🧟", weak: "flame", resist: "frost" }
+  { name: "부랑 괴물", icon: "👹", art: "foe_brute", weak: "slash", resist: "shadow" },
+  { name: "녹슨 갑주 망령", icon: "💀", art: "foe_wraith", weak: "holy", resist: "slash" },
+  { name: "굶주린 들개 무리", icon: "🐺", art: "foe_hounds", weak: "flame", resist: "frost" },
+  { name: "허물 벗은 도마뱀", icon: "🦎", art: "foe_lizard", weak: "frost", resist: "flame" },
+  { name: "그림자 술사", icon: "🧙", art: "foe_caster", weak: "holy", resist: "shadow" },
+  { name: "얼어붙은 망자", icon: "🧟", art: "foe_frozen", weak: "flame", resist: "frost" }
 ];
 export const FOES_BOSS = [
-  { name: "회랑의 감시자", icon: "👁️", weak: "shadow", resist: "holy" },
-  { name: "심연의 문지기", icon: "🗿", weak: "flame", resist: "slash" },
-  { name: "붉은 눈의 기사", icon: "🩸", weak: "holy", resist: "shadow" }
+  { name: "회랑의 감시자", icon: "👁️", art: "boss_watcher", weak: "shadow", resist: "holy" },
+  { name: "심연의 문지기", icon: "🗿", art: "boss_gate", weak: "flame", resist: "slash" },
+  { name: "붉은 눈의 기사", icon: "🩸", art: "boss_knight", weak: "holy", resist: "shadow" }
 ];
 
 // ── 회랑의 축복 (런 시작 시 3택1, 해당 런에만 적용) ────────

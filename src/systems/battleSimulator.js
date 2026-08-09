@@ -253,6 +253,7 @@ export function simulateRun(loadoutIds, realmLevels = {}, blessingId = null, rng
         foes: enemies.map((e) => ({
           name: e.name,
           icon: e.icon,
+          art: e.art,
           hp: e.hp,
           max: e.maxHp,
           boss: e.isBoss,

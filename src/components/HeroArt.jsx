@@ -1,6 +1,27 @@
-// 후드를 쓴 회귀자 — 핸드메이드 벡터 일러스트.
-// size 로 크기만 조절하고 비율은 유지한다.
+import { useState } from "react";
+
+// 후드를 쓴 회귀자.
+// public/art/hero.png (generate-cards.mjs 로 생성)가 있으면 그 일러스트를,
+// 없으면 핸드메이드 벡터 일러스트를 보여준다.
 export default function HeroArt({ size = 80, dead = false }) {
+  const [imgOk, setImgOk] = useState(true);
+  if (imgOk) {
+    return (
+      <div
+        style={{ width: size, height: size }}
+        className="rounded-full bg-gradient-to-b from-amber-200 via-amber-500 to-amber-800 p-[2px] shadow-[0_0_16px_rgba(240,199,94,0.5)]"
+      >
+        <img
+          src={`${import.meta.env.BASE_URL}art/hero.png`}
+          alt="회귀자"
+          draggable={false}
+          onError={() => setImgOk(false)}
+          className="h-full w-full rounded-full object-cover"
+          style={dead ? { filter: "grayscale(1) brightness(0.55)" } : undefined}
+        />
+      </div>
+    );
+  }
   return (
     <svg
       width={size}
