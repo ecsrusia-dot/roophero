@@ -17,7 +17,10 @@ export default function HeroArt({ size = 80, dead = false }) {
           draggable={false}
           onError={() => setImgOk(false)}
           className="h-full w-full rounded-full object-cover"
-          style={dead ? { filter: "grayscale(1) brightness(0.55)" } : undefined}
+          style={{
+            imageRendering: "pixelated",
+            ...(dead ? { filter: "grayscale(1) brightness(0.55)" } : {})
+          }}
         />
       </div>
     );

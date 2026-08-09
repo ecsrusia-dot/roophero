@@ -12,6 +12,7 @@ export default function ArtImg({ id, fallback, className = "", alt = "" }) {
       draggable={false}
       onError={() => setFailed(true)}
       className={`h-full w-full object-cover ${className}`}
+      style={{ imageRendering: "pixelated" }}
     />
   );
 }
