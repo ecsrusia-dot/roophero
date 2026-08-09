@@ -405,3 +405,31 @@ export function cardById(id) {
 export function scaledValue(baseValue, level) {
   return Math.round(baseValue * (1 + LEVEL_SCALING * (level - 1)) * 10) / 10;
 }
+
+// ── 저주 회랑 (난이도 선택: 몹 강화 ↔ 포인트 배율) ────────
+// n단계 해금 조건: 최고 기록 ≥ unlockPer × n
+export const CURSE = {
+  max: 5,
+  unlockPer: 8,
+  statMult: 0.4, // 단계당 몹 스탯 +40%
+  pointMult: 0.5 // 단계당 포인트 +50%
+};
+
+export function curseUnlocked(bestFloor) {
+  return Math.min(CURSE.max, Math.floor(bestFloor / CURSE.unlockPer));
+}
+
+// ── 업적 (일회성 보상, claimedAch 에 수령 기록) ──────────
+export const ACHIEVEMENTS = [
+  { id: "ach_first", icon: "🚪", name: "첫 환생", description: "처음으로 환생한다", reward: 50, check: (s) => s.stats.runs >= 1 },
+  { id: "ach_floor10", icon: "🏰", name: "수문장을 넘어", description: "10층에 도달한다", reward: 100, check: (s) => s.bestFloor >= 10 },
+  { id: "ach_floor20", icon: "🌫️", name: "더 깊은 곳으로", description: "20층에 도달한다", reward: 250, check: (s) => s.bestFloor >= 20 },
+  { id: "ach_floor30", icon: "🌑", name: "심연의 끝자락", description: "30층에 도달한다", reward: 500, check: (s) => s.bestFloor >= 30 },
+  { id: "ach_kills100", icon: "⚔️", name: "백인참", description: "누적 100마리 처치", reward: 150, check: (s) => s.stats.kills >= 100 },
+  { id: "ach_kills500", icon: "💀", name: "오백인참", description: "누적 500마리 처치", reward: 400, check: (s) => s.stats.kills >= 500 },
+  { id: "ach_runs10", icon: "🔄", name: "회귀 중독", description: "환생 10회", reward: 200, check: (s) => s.stats.runs >= 10 },
+  { id: "ach_collect8", icon: "📖", name: "수집가", description: "카드 8종 수집", reward: 150, check: (s) => Object.keys(s.collection).length >= 8 },
+  { id: "ach_collect_all", icon: "👑", name: "도감 완성", description: "모든 카드 수집", reward: 1000, check: (s) => Object.keys(s.collection).length >= CARDS.length },
+  { id: "ach_legend", icon: "🌟", name: "전설과의 조우", description: "전설 카드 획득", reward: 300, check: (s) => CARDS.some((c) => c.rarity === "legendary" && s.collection[c.id]) },
+  { id: "ach_curse3", icon: "☠️", name: "고행자", description: "저주 3단계에서 10층 돌파", reward: 400, check: (s) => Boolean(s.stats.curse3Floor10) }
+];

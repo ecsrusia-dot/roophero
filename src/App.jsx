@@ -1,15 +1,25 @@
 import { useEffect, useRef, useState } from "react";
-import { LOADOUT_LIMITS, REALMS, realmCost, GACHA_COST, BLESSINGS } from "./data.js";
+import {
+  LOADOUT_LIMITS,
+  REALMS,
+  realmCost,
+  GACHA_COST,
+  BLESSINGS,
+  ACHIEVEMENTS,
+  curseUnlocked
+} from "./data.js";
 import { simulateRun, computePlayerStats } from "./systems/battleSimulator.js";
 import { pullOnce } from "./systems/gacha.js";
 import { initStorage, loadSave, saveSave } from "./firebase.js";
 import { power } from "./utils/format.js";
+import { sfx, setMuted } from "./utils/sound.js";
 import Hud from "./components/Hud.jsx";
 import BottomNav from "./components/BottomNav.jsx";
 import PrepareScreen from "./components/PrepareScreen.jsx";
 import BattleScreen from "./components/BattleScreen.jsx";
 import GachaScreen from "./components/GachaScreen.jsx";
 import RealmScreen from "./components/RealmScreen.jsx";
+import CollectionScreen from "./components/CollectionScreen.jsx";
 import BlessingModal from "./components/BlessingModal.jsx";
 
 // 첫 환생자에게 주어지는 것들: 몸에 밴 검격 하나, 낡은 갑옷 한 벌, 약간의 포인트
@@ -21,7 +31,11 @@ const NEW_SAVE = {
   },
   realmLevels: {},
   loadout: { skill: ["skill_001"], equipment: ["equip_001"], companion: [] },
-  bestFloor: 0
+  bestFloor: 0,
+  curse: 0,
+  soundOn: true,
+  stats: { runs: 0, kills: 0, curse3Floor10: false },
+  claimedAch: []
 };
 
 export default function App() {
@@ -38,7 +52,11 @@ export default function App() {
       const { mode } = await initStorage();
       setStorageMode(mode);
       const data = await loadSave();
-      setSave(data ? { ...NEW_SAVE, ...data } : NEW_SAVE);
+      const merged = data
+        ? { ...NEW_SAVE, ...data, stats: { ...NEW_SAVE.stats, ...(data.stats || {}) } }
+        : NEW_SAVE;
+      setSave(merged);
+      setMuted(!merged.soundOn);
       loaded.current = true;
     })();
   }, []);
@@ -69,8 +87,11 @@ export default function App() {
     companion: withLevels(save.loadout.companion)
   };
   const stats = computePlayerStats(loadoutIds, save.realmLevels);
+  const maxCurse = curseUnlocked(save.bestFloor);
+  const curse = Math.min(save.curse, maxCurse);
 
   const toggleLoadout = (category, cardId) => {
+    sfx.click();
     setSave((s) => {
       const cur = s.loadout[category];
       const next = cur.includes(cardId)
@@ -88,6 +109,7 @@ export default function App() {
       const level = s.realmLevels[realmId] || 0;
       const cost = realmCost(realm, level);
       if (s.points < cost) return s;
+      sfx.drop();
       return {
         ...s,
         points: s.points - cost,
@@ -96,26 +118,41 @@ export default function App() {
     });
   };
 
+  const setCurse = (level) => {
+    sfx.click();
+    setSave((s) => ({ ...s, curse: level }));
+  };
+
   // 출전 → 축복 3택1 → 시뮬레이션 시작
   const startRun = () => {
+    sfx.click();
     const shuffled = [...BLESSINGS].sort(() => Math.random() - 0.5);
     setBlessingChoices(shuffled.slice(0, 3));
   };
 
   const beginWithBlessing = (blessingId) => {
+    sfx.click();
     setBlessingChoices(null);
-    setRun(simulateRun(loadoutIds, save.realmLevels, blessingId));
+    setRun(simulateRun(loadoutIds, save.realmLevels, blessingId, curse));
     setScreen("battle");
   };
 
-  const finishRun = () => {
+  const finishRun = (retry = false) => {
+    const { floor, kills, points } = run.result;
     setSave((s) => ({
       ...s,
-      points: s.points + run.result.points,
-      bestFloor: Math.max(s.bestFloor, run.result.floor)
+      points: s.points + points,
+      bestFloor: Math.max(s.bestFloor, floor),
+      stats: {
+        ...s.stats,
+        runs: s.stats.runs + 1,
+        kills: s.stats.kills + kills,
+        curse3Floor10: s.stats.curse3Floor10 || (curse >= 3 && floor >= 10)
+      }
     }));
     setRun(null);
     setScreen("prepare");
+    if (retry) startRun();
   };
 
   const pull = (times) => {
@@ -128,12 +165,37 @@ export default function App() {
       points = r.points;
       collection = r.collection;
     }
-    if (results.length > 0) setSave((s) => ({ ...s, points, collection }));
+    if (results.length > 0) {
+      setSave((s) => ({ ...s, points, collection }));
+      if (results.some((r) => r.card.rarity === "legendary")) sfx.legendary();
+      else sfx.gacha();
+    }
     return results;
+  };
+
+  const claimAch = (achId) => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === achId);
+    if (!ach || save.claimedAch.includes(achId) || !ach.check(save)) return;
+    sfx.achievement();
+    setSave((s) => ({
+      ...s,
+      points: s.points + ach.reward,
+      claimedAch: [...s.claimedAch, achId]
+    }));
+  };
+
+  const toggleSound = () => {
+    setSave((s) => {
+      setMuted(s.soundOn); // 토글 후 상태 기준
+      return { ...s, soundOn: !s.soundOn };
+    });
   };
 
   const cheapestRealm = Math.min(
     ...REALMS.map((r) => realmCost(r, save.realmLevels[r.id] || 0))
+  );
+  const hasClaimable = ACHIEVEMENTS.some(
+    (a) => !save.claimedAch.includes(a.id) && a.check(save)
   );
 
   return (
@@ -143,6 +205,8 @@ export default function App() {
         bestFloor={save.bestFloor}
         powerValue={power(stats)}
         storageMode={storageMode}
+        soundOn={save.soundOn}
+        onToggleSound={toggleSound}
       />
 
       <main className={screen === "battle" ? "" : "pb-16"}>
@@ -151,12 +215,21 @@ export default function App() {
             collection={save.collection}
             realmLevels={save.realmLevels}
             loadout={save.loadout}
+            curse={curse}
+            maxCurse={maxCurse}
+            onSetCurse={setCurse}
             onToggle={toggleLoadout}
             onStart={startRun}
           />
         )}
         {screen === "battle" && run && (
-          <BattleScreen run={run} loadoutSkills={save.loadout.skill} onFinish={finishRun} />
+          <BattleScreen
+            run={run}
+            curse={curse}
+            loadoutSkills={save.loadout.skill}
+            onFinish={() => finishRun(false)}
+            onRetry={() => finishRun(true)}
+          />
         )}
         {screen === "realm" && (
           <RealmScreen realmLevels={save.realmLevels} points={save.points} onBuyRealm={buyRealm} />
@@ -164,6 +237,7 @@ export default function App() {
         {screen === "gacha" && (
           <GachaScreen points={save.points} collection={save.collection} onPull={pull} />
         )}
+        {screen === "collection" && <CollectionScreen save={save} onClaim={claimAch} />}
       </main>
 
       {blessingChoices && (
@@ -177,10 +251,14 @@ export default function App() {
       {screen !== "battle" && (
         <BottomNav
           screen={screen}
-          onChange={setScreen}
+          onChange={(id) => {
+            sfx.click();
+            setScreen(id);
+          }}
           dots={{
             gacha: save.points >= GACHA_COST,
-            realm: save.points >= cheapestRealm
+            realm: save.points >= cheapestRealm,
+            collection: hasClaimable
           }}
         />
       )}

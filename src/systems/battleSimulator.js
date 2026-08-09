@@ -23,7 +23,8 @@ import {
   FOES_BOSS,
   WEAKNESS_MULT,
   RESIST_MULT,
-  CRIT_MULT
+  CRIT_MULT,
+  CURSE
 } from "../data.js";
 
 const MAX_FLOORS = 500; // 무한 루프 방지 안전장치
@@ -126,8 +127,8 @@ export function computePlayerStats(loadoutIds, realmLevels = {}) {
   return buildPlayerStats(toLoadout(loadoutIds), realmLevels);
 }
 
-function makeEnemy(floor, index, rng) {
-  const scale = 1 + floor * FLOOR_SCALING;
+function makeEnemy(floor, index, rng, curse = 0) {
+  const scale = (1 + floor * FLOOR_SCALING) * (1 + curse * CURSE.statMult);
   const isBoss = floor % 10 === 0 && index === 0;
   const mult = isBoss ? 3 : 1;
   const pool = isBoss ? FOES_BOSS : FOES_NORMAL;
@@ -148,9 +149,16 @@ function makeEnemy(floor, index, rng) {
  * @param {object} loadoutIds {skill: [{id, level}], equipment: [...], companion: [...]}
  * @param {object} realmLevels {realm_hp: 2, ...}
  * @param {string|null} blessingId 선택한 축복 (없으면 null)
+ * @param {number} curse 저주 단계 (0~CURSE.max)
  * @param {function} [rng] 테스트용 난수 함수 (기본 Math.random)
  */
-export function simulateRun(loadoutIds, realmLevels = {}, blessingId = null, rng = Math.random) {
+export function simulateRun(
+  loadoutIds,
+  realmLevels = {},
+  blessingId = null,
+  curse = 0,
+  rng = Math.random
+) {
   const loadout = toLoadout(loadoutIds);
   const stats = buildPlayerStats(loadout, realmLevels);
   const startFloor = applyBlessing(stats, blessingId);
@@ -239,13 +247,15 @@ export function simulateRun(loadoutIds, realmLevels = {}, blessingId = null, rng
   };
 
   push("run_start", "낡은 문이 열리고, 끝없는 회랑의 냉기가 스며든다.");
+  if (curse > 0)
+    push("event_shrine", `저주 ${curse}단계 — 회랑이 더 깊게 뒤틀린다. (몹 +${Math.round(curse * CURSE.statMult * 100)}% / 포인트 +${Math.round(curse * CURSE.pointMult * 100)}%)`);
   if (blessingId === "bless_rush")
     push("event_shrine", "익숙한 초입을 단숨에 내달렸다. 5층에서 시작한다.");
 
   while (floor < MAX_FLOORS) {
     floor += 1;
     const enemyCount = floor % 10 === 0 ? 1 : Math.min(3, 1 + Math.floor(floor / 7));
-    enemies = Array.from({ length: enemyCount }, (_, i) => makeEnemy(floor, i, rng));
+    enemies = Array.from({ length: enemyCount }, (_, i) => makeEnemy(floor, i, rng, curse));
     push(
       "floor_start",
       `${floor}층 — ${enemies.map((e) => e.name).join(", ")}${enemies[0].isBoss ? " (수문장)" : ""} 이(가) 길을 막아선다.`,
@@ -445,7 +455,8 @@ export function simulateRun(loadoutIds, realmLevels = {}, blessingId = null, rng
       kills * POINT_WEIGHTS.kill +
       itemRaritySum * POINT_WEIGHTS.itemRarity +
       bonusPoints) *
-      stats.pointsMult
+      stats.pointsMult *
+      (1 + curse * CURSE.pointMult)
   );
 
   push(

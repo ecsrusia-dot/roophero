@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cardById, ELEMENT_INFO } from "../data.js";
 import { fmt } from "../utils/format.js";
+import { sfx } from "../utils/sound.js";
 import HeroArt from "./HeroArt.jsx";
 import ArtImg from "./ArtImg.jsx";
 
@@ -20,7 +21,7 @@ const EVENT_TOAST = {
 
 let numId = 0;
 
-export default function BattleScreen({ run, loadoutSkills, onFinish }) {
+export default function BattleScreen({ run, curse = 0, loadoutSkills, onFinish, onRetry }) {
   const { log, result, stats } = run;
   const [idx, setIdx] = useState(0);
   const [speed, setSpeed] = useState(1);
@@ -73,6 +74,8 @@ export default function BattleScreen({ run, loadoutSkills, onFinish }) {
       case "skill":
       case "attack":
       case "companion": {
+        if (e.tags?.includes("crit")) sfx.crit();
+        else if (e.target !== undefined) sfx.hit();
         setHeroFx(true);
         after(() => setHeroFx(false), 330);
         if (e.card) {
@@ -100,11 +103,14 @@ export default function BattleScreen({ run, loadoutSkills, onFinish }) {
         break;
       case "skill_heal":
       case "companion_heal":
+        sfx.heal();
         spawnNum("hero", `+${fmt(e.value)}`, "text-emerald-300 text-xl");
         break;
       case "enemy_attack":
       case "boss_smash": {
         const smash = e.type === "boss_smash";
+        if (smash) sfx.smash();
+        else sfx.hurt();
         setAtkFoe(e.attacker);
         setChargeFoe(null);
         after(() => setAtkFoe(null), 330);
@@ -122,6 +128,7 @@ export default function BattleScreen({ run, loadoutSkills, onFinish }) {
         setBanner({ key: `c${idx}`, text: "⚠ 강타 예고", cls: "text-red-400" });
         break;
       case "dodge":
+        sfx.dodge();
         spawnNum("hero", "회피!", "text-cyan-300 text-xl");
         break;
       case "enrage":
@@ -129,9 +136,11 @@ export default function BattleScreen({ run, loadoutSkills, onFinish }) {
         spawnNum(e.target, "광폭화!", "text-red-400 text-base");
         break;
       case "kill":
+        sfx.kill();
         setFoes((fs) => fs.map((f, i) => (i === e.target ? { ...f, dead: true } : f)));
         break;
       case "drop":
+        sfx.drop();
         setLoots((l) => [
           ...l.slice(-2),
           { id: ++numId, icon: "✦", text: "전리품", cls: "text-amber-200" }
@@ -151,6 +160,7 @@ export default function BattleScreen({ run, loadoutSkills, onFinish }) {
         break;
       }
       case "death":
+        sfx.death();
         setDead(true);
         break;
       default:
@@ -181,6 +191,7 @@ export default function BattleScreen({ run, loadoutSkills, onFinish }) {
       <div className="mb-1.5 flex items-center justify-between px-1">
         <span className="font-display text-lg font-black text-gold-grad">
           {floor > 0 ? `${floor}층` : "—"}
+          {curse > 0 && <span className="ml-1.5 text-sm text-red-400">☠{curse}</span>}
         </span>
         <div className="flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1">
           {foes.map((f, i) => (
@@ -396,12 +407,20 @@ export default function BattleScreen({ run, loadoutSkills, onFinish }) {
                 환생 포인트 +{fmt(result.points)}
               </div>
             </div>
-            <button
-              onClick={onFinish}
-              className="btn-gold w-full rounded-xl py-3 font-display text-base font-black"
-            >
-              환생한다
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={onFinish}
+                className="btn-gold rounded-xl py-3 font-display text-sm font-black"
+              >
+                환생한다
+              </button>
+              <button
+                onClick={onRetry}
+                className="btn-violet rounded-xl py-3 font-display text-sm font-black"
+              >
+                ⚡ 바로 재출전
+              </button>
+            </div>
           </div>
         ) : (
           <div className="py-1 text-center text-[10px] tracking-widest text-stone-600">

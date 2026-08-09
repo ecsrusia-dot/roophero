@@ -1,7 +1,7 @@
 import { fmt } from "../utils/format.js";
 import HeroArt from "./HeroArt.jsx";
 
-export default function Hud({ points, bestFloor, powerValue, storageMode }) {
+export default function Hud({ points, bestFloor, powerValue, storageMode, soundOn, onToggleSound }) {
   return (
     <header className="flex items-center justify-between px-4 py-3">
       <div className="flex items-center gap-2.5">
@@ -25,9 +25,17 @@ export default function Hud({ points, bestFloor, powerValue, storageMode }) {
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-1.5 rounded-full border border-amber-700/60 bg-gradient-to-b from-[#241a3f] to-[#120c26] px-3 py-1.5 shadow-[0_0_10px_rgba(240,199,94,0.25)]">
-        <span className="text-sm">💎</span>
-        <span className="font-display text-sm font-black text-gold-grad">{fmt(points)}</span>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onToggleSound}
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/30 text-sm"
+        >
+          {soundOn ? "🔊" : "🔇"}
+        </button>
+        <div className="flex items-center gap-1.5 rounded-full border border-amber-700/60 bg-gradient-to-b from-[#241a3f] to-[#120c26] px-3 py-1.5 shadow-[0_0_10px_rgba(240,199,94,0.25)]">
+          <span className="text-sm">💎</span>
+          <span className="font-display text-sm font-black text-gold-grad">{fmt(points)}</span>
+        </div>
       </div>
     </header>
   );

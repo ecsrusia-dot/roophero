@@ -1,4 +1,4 @@
-import { cardById, LOADOUT_LIMITS } from "../data.js";
+import { cardById, LOADOUT_LIMITS, CURSE } from "../data.js";
 import { computePlayerStats } from "../systems/battleSimulator.js";
 import { fmt, power } from "../utils/format.js";
 import Card from "./Card.jsx";
@@ -10,7 +10,16 @@ const SECTIONS = [
   { category: "companion", title: "동료", icon: "🐾" }
 ];
 
-export default function PrepareScreen({ collection, realmLevels, loadout, onToggle, onStart }) {
+export default function PrepareScreen({
+  collection,
+  realmLevels,
+  loadout,
+  curse,
+  maxCurse,
+  onSetCurse,
+  onToggle,
+  onStart
+}) {
   const withLevels = (ids) => ids.map((id) => ({ id, level: collection[id]?.level || 1 }));
   const stats = computePlayerStats(
     {
@@ -65,6 +74,47 @@ export default function PrepareScreen({ collection, realmLevels, loadout, onTogg
       <p className="px-1 text-xs leading-relaxed text-violet-200/70">
         환생의 제단 앞. 다시 회랑에 들어서기 전에 몸에 익힐 기술과 챙길 장비를 고른다.
       </p>
+
+      {/* 저주 회랑: 위험할수록 더 많은 포인트 */}
+      <section className="rounded-xl border border-red-900/50 bg-gradient-to-b from-[#2a1020]/80 to-[#150a14]/80 p-3">
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-display text-sm font-black text-red-300">☠ 저주 회랑</h2>
+          {curse > 0 ? (
+            <span className="text-[10px] text-red-300/90">
+              몹 +{Math.round(curse * CURSE.statMult * 100)}% · 포인트 +
+              {Math.round(curse * CURSE.pointMult * 100)}%
+            </span>
+          ) : (
+            <span className="text-[10px] text-stone-500">평범한 회랑</span>
+          )}
+        </div>
+        <div className="mt-2 flex gap-1.5">
+          {Array.from({ length: CURSE.max + 1 }, (_, lv) => {
+            const locked = lv > maxCurse;
+            return (
+              <button
+                key={lv}
+                disabled={locked}
+                onClick={() => onSetCurse(lv)}
+                className={`flex h-9 flex-1 items-center justify-center rounded-lg text-sm font-black transition ${
+                  curse === lv
+                    ? "bg-gradient-to-b from-red-600/70 to-red-950 text-red-100 ring-2 ring-red-400 shadow-[0_0_10px_rgba(239,68,68,0.5)]"
+                    : locked
+                      ? "bg-black/30 text-stone-700"
+                      : "bg-black/40 text-stone-400 hover:text-red-300"
+                }`}
+              >
+                {locked ? "🔒" : lv === 0 ? "—" : `☠${lv}`}
+              </button>
+            );
+          })}
+        </div>
+        {maxCurse < CURSE.max && (
+          <p className="mt-1.5 text-[10px] text-stone-600">
+            다음 단계 해금: 최고 기록 {(maxCurse + 1) * CURSE.unlockPer}층
+          </p>
+        )}
+      </section>
 
       {SECTIONS.map(({ category, title, icon }) => {
         const owned = ownedByCategory(category);

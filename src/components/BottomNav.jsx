@@ -1,13 +1,14 @@
 const TABS = [
   { id: "prepare", label: "출전", icon: "⚔️" },
   { id: "realm", label: "경지", icon: "👑" },
-  { id: "gacha", label: "소환", icon: "🔮" }
+  { id: "gacha", label: "소환", icon: "🔮" },
+  { id: "collection", label: "도감", icon: "📖" }
 ];
 
 export default function BottomNav({ screen, onChange, dots = {} }) {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-amber-900/40 bg-[#0a0716]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-      <div className="mx-auto grid max-w-md grid-cols-3">
+      <div className="mx-auto grid max-w-md grid-cols-4">
         {TABS.map((tab) => {
           const active = screen === tab.id;
           return (
